@@ -129,6 +129,44 @@ class ResearchProjectImportProcessor:
                     # Sync knowledge areas from initiatives to unit
                     unit.sync_knowledge_areas_from_initiatives()
             
+            # Process external research groups (GrupoPesquisaExterno)
+            if row.get('GrupoPesquisaExterno'):
+                # Parse multiple external groups (comma-separated)
+                external_groups = [g.strip() for g in row['GrupoPesquisaExterno'].split(',') if g.strip()]
+                
+                for group_name in external_groups:
+                    # Get knowledge area for the external group (use initiative's knowledge area if available)
+                    ka = knowledge_area if row.get('AreaConhecimento') else None
+                    
+                    # Create or get external research group
+                    external_unit = self.group_handler.get_or_create_external_research_group(
+                        name=group_name,
+                        knowledge_area=ka
+                    )
+                    
+                    if external_unit:
+                        # Add initiative to external unit's initiatives
+                        external_unit.initiatives.add(initiative)
+                        # Sync knowledge areas from initiatives to unit
+                        external_unit.sync_knowledge_areas_from_initiatives()
+            
+            # Process demanding partner (ParceiroDemandante)
+            if row.get('ParceiroDemandante'):
+                # Get knowledge area for the demanding partner (use initiative's knowledge area if available)
+                ka = knowledge_area if row.get('AreaConhecimento') else None
+                
+                # Create or get demanding partner organization
+                demanding_partner = self.group_handler.get_or_create_demanding_partner(
+                    name=row['ParceiroDemandante'],
+                    knowledge_area=ka
+                )
+                
+                if demanding_partner:
+                    # Set the demanding partner for this initiative
+                    initiative.demanding_partner = demanding_partner
+                    # Save without calling full_clean() to avoid validation errors
+                    super(type(initiative), initiative).save()
+            
             self.reporter.add_success(row_number, row['Titulo'])
             
         except ValidationError as e:

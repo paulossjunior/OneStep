@@ -177,6 +177,14 @@ class Initiative(TimestampedModel):
         related_name='initiatives',
         help_text="Knowledge areas associated with this initiative"
     )
+    demanding_partner = models.ForeignKey(
+        'organizational_group.OrganizationalUnit',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='demanded_initiatives',
+        help_text="Organization that demands/requests this initiative"
+    )
     
     class Meta:
         ordering = ['name']
@@ -313,3 +321,67 @@ class Initiative(TimestampedModel):
             level += 1
             current = current.parent
         return level
+    
+    @property
+    def external_research_groups(self):
+        """
+        Get organizational units (external research groups) associated with this initiative.
+        
+        Returns:
+            QuerySet: OrganizationalUnits associated with this initiative
+        """
+        return self.units.all()
+    
+    @property
+    def external_research_groups_count(self):
+        """
+        Get the count of external research groups for this initiative.
+        
+        Returns:
+            int: Number of organizational units associated with this initiative
+        """
+        return self.units.count()
+    
+    def get_external_research_groups_by_type(self, type_code):
+        """
+        Get external research groups filtered by organizational type.
+        
+        Args:
+            type_code (str): Type code (e.g., 'research', 'extension')
+            
+        Returns:
+            QuerySet: Filtered organizational units
+        """
+        return self.units.filter(type__code=type_code)
+    
+    def get_external_research_groups_by_campus(self, campus):
+        """
+        Get external research groups filtered by campus.
+        
+        Args:
+            campus: Campus instance or campus name
+            
+        Returns:
+            QuerySet: Filtered organizational units
+        """
+        if isinstance(campus, str):
+            return self.units.filter(campus__name__iexact=campus)
+        return self.units.filter(campus=campus)
+    
+    def add_external_research_group(self, organizational_unit):
+        """
+        Add an organizational unit as an external research group.
+        
+        Args:
+            organizational_unit: OrganizationalUnit instance to add
+        """
+        self.units.add(organizational_unit)
+    
+    def remove_external_research_group(self, organizational_unit):
+        """
+        Remove an organizational unit from external research groups.
+        
+        Args:
+            organizational_unit: OrganizationalUnit instance to remove
+        """
+        self.units.remove(organizational_unit)

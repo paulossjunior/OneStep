@@ -17,16 +17,44 @@ from .models import (
 from .csv_import import ImportProcessor
 
 
+class OrganizationalUnitInline(admin.TabularInline):
+    """
+    Inline admin for organizational units within an organization.
+    """
+    model = OrganizationalGroup
+    fk_name = 'organization'
+    extra = 0
+    can_delete = False
+    
+    fields = ['name', 'short_name', 'type', 'campus', 'knowledge_area', 'view_link']
+    readonly_fields = ['name', 'short_name', 'type', 'campus', 'knowledge_area', 'view_link']
+    
+    def view_link(self, obj):
+        """Display link to view/edit the organizational unit."""
+        if obj.pk:
+            url = reverse('admin:organizational_group_organizationalunit_change', args=[obj.pk])
+            return format_html('<a href="{}">View/Edit</a>', url)
+        return '-'
+    view_link.short_description = 'Actions'
+    
+    def has_add_permission(self, request, obj=None):
+        """Disable adding units through inline."""
+        return False
+
+
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
     """
     Django Admin configuration for Organization model.
+    
+    Displays organization information and all its organizational units.
     """
     
     list_display = [
         'name',
         'description_preview',
         'unit_count_display',
+        'units_by_type_display',
         'created_at'
     ]
     
@@ -36,17 +64,47 @@ class OrganizationAdmin(admin.ModelAdmin):
     
     list_filter = ['created_at', 'updated_at']
     
-    readonly_fields = ['id', 'created_at', 'updated_at', 'unit_count_display']
+    readonly_fields = [
+        'id',
+        'created_at',
+        'updated_at',
+        'unit_count_display',
+        'units_by_type_display',
+        'units_by_campus_display',
+        'units_list_display',
+        'demanded_initiatives_count_display',
+        'demanded_initiatives_list_display'
+    ]
     
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'description')
+        }),
+        ('Organizational Units', {
+            'fields': ('unit_count_display', 'units_by_type_display', 'units_by_campus_display', 'units_list_display'),
+            'description': 'Summary of organizational units in this organization.'
+        }),
+        ('Demanded Initiatives', {
+            'fields': ('demanded_initiatives_count_display', 'demanded_initiatives_list_display'),
+            'description': 'Initiatives demanded/requested by units in this organization (for Demanding Partners).'
         }),
         ('Metadata', {
             'fields': ('id', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+    
+    inlines = [OrganizationalUnitInline]
+    
+    def get_queryset(self, request):
+        """Optimize queryset with prefetch."""
+        return super().get_queryset(request).prefetch_related(
+            'units__type',
+            'units__campus',
+            'units__knowledge_area',
+            'units__demanded_initiatives',
+            'units__demanded_initiatives__type'
+        )
     
     def description_preview(self, obj):
         """Display truncated description."""
@@ -69,6 +127,122 @@ class OrganizationAdmin(admin.ModelAdmin):
             )
         return format_html('<span style="color: #999;">No units</span>')
     unit_count_display.short_description = 'Units'
+    
+    def units_by_type_display(self, obj):
+        """Display breakdown of units by type."""
+        units = obj.units.all()
+        if not units:
+            return format_html('<span style="color: #999;">No units</span>')
+        
+        # Count by type
+        type_counts = {}
+        for unit in units:
+            type_name = unit.type.name if unit.type else 'Unknown'
+            type_counts[type_name] = type_counts.get(type_name, 0) + 1
+        
+        # Format output
+        parts = [f'{count} {type_name}' for type_name, count in sorted(type_counts.items())]
+        return format_html('<br>'.join(parts))
+    units_by_type_display.short_description = 'Units by Type'
+    
+    def units_by_campus_display(self, obj):
+        """Display breakdown of units by campus."""
+        units = obj.units.all()
+        if not units:
+            return format_html('<span style="color: #999;">No units</span>')
+        
+        # Count by campus
+        campus_counts = {}
+        for unit in units:
+            campus_name = unit.campus.name if unit.campus else 'Unknown'
+            campus_counts[campus_name] = campus_counts.get(campus_name, 0) + 1
+        
+        # Format output
+        parts = [f'{count} on {campus}' for campus, count in sorted(campus_counts.items())]
+        return format_html('<br>'.join(parts))
+    units_by_campus_display.short_description = 'Units by Campus'
+    
+    def units_list_display(self, obj):
+        """Display list of all organizational units with links."""
+        units = obj.units.all().order_by('name')
+        if not units:
+            return format_html('<span style="color: #999;">No organizational units</span>')
+        
+        links = []
+        for unit in units:
+            url = reverse('admin:organizational_group_organizationalunit_change', args=[unit.pk])
+            type_name = unit.type.name if unit.type else 'Unknown'
+            campus_name = unit.campus.name if unit.campus else 'Unknown'
+            links.append(format_html(
+                '<a href="{}" title="Type: {} | Campus: {}">{}</a> <span style="color: #666;">({} - {})</span>',
+                url,
+                type_name,
+                campus_name,
+                unit.name,
+                type_name,
+                campus_name
+            ))
+        
+        return format_html('<br>'.join(links))
+    units_list_display.short_description = 'Organizational Units List'
+    
+    def demanded_initiatives_count_display(self, obj):
+        """Display count of initiatives demanded by units in this organization."""
+        # Get all units in this organization
+        units = obj.units.all()
+        
+        # Count total demanded initiatives across all units
+        total_count = 0
+        for unit in units:
+            if hasattr(unit, 'demanded_initiatives'):
+                total_count += unit.demanded_initiatives.count()
+        
+        if total_count > 0:
+            return format_html(
+                '<strong>{}</strong> initiative{} demanded',
+                total_count,
+                's' if total_count != 1 else ''
+            )
+        return format_html('<span style="color: #999;">No demanded initiatives</span>')
+    demanded_initiatives_count_display.short_description = 'Demanded Initiatives'
+    
+    def demanded_initiatives_list_display(self, obj):
+        """Display list of initiatives demanded by units in this organization."""
+        # Get all units in this organization
+        units = obj.units.all()
+        
+        # Collect all demanded initiatives
+        initiatives_by_unit = []
+        for unit in units:
+            if hasattr(unit, 'demanded_initiatives'):
+                demanded = unit.demanded_initiatives.all()
+                if demanded:
+                    initiatives_by_unit.append((unit, demanded))
+        
+        if not initiatives_by_unit:
+            return format_html('<span style="color: #999;">No initiatives demanded by units in this organization</span>')
+        
+        # Format output grouped by unit
+        output_parts = []
+        for unit, initiatives in initiatives_by_unit:
+            unit_url = reverse('admin:organizational_group_organizationalunit_change', args=[unit.pk])
+            output_parts.append(format_html(
+                '<strong><a href="{}">{}</a></strong> demands:',
+                unit_url,
+                unit.name
+            ))
+            
+            for initiative in initiatives:
+                init_url = reverse('admin:initiatives_initiative_change', args=[initiative.pk])
+                output_parts.append(format_html(
+                    '&nbsp;&nbsp;• <a href="{}" title="View initiative">{}</a> <span style="color: #666;">({})</span>',
+                    init_url,
+                    initiative.name,
+                    initiative.type.name if initiative.type else 'Unknown'
+                ))
+        
+        return format_html('<br>'.join(output_parts))
+    demanded_initiatives_list_display.short_description = 'Demanded Initiatives List'
 
 
 @admin.register(OrganizationalType)

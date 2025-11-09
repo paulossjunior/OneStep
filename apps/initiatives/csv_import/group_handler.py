@@ -70,6 +70,184 @@ class GroupHandler:
         
         return unit
     
+    def get_or_create_external_research_group(self, name: str, knowledge_area: Optional[KnowledgeArea] = None) -> Optional[OrganizationalUnit]:
+        """
+        Get or create an external research group (OrganizationalUnit).
+        
+        Args:
+            name: External research group name
+            knowledge_area: Optional knowledge area to associate
+            
+        Returns:
+            OrganizationalUnit: Existing or newly created unit, or None if name is empty
+        """
+        if not name or not name.strip():
+            return None
+        
+        # Normalize name
+        normalized_name = self.normalize_name(name)
+        
+        # Try to find existing unit (case-insensitive)
+        unit = OrganizationalUnit.objects.filter(
+            models.Q(name__iexact=normalized_name) | 
+            models.Q(short_name__iexact=normalized_name)
+        ).first()
+        
+        if unit:
+            return unit
+        
+        # Create new external research group
+        try:
+            from apps.organizational_group.models import Organization, OrganizationalType, Campus
+            
+            # Get or create default organization for external groups
+            organization, _ = Organization.objects.get_or_create(
+                name='External Organizations',
+                defaults={'description': 'External research groups and organizations'}
+            )
+            
+            # Get or create Research type
+            org_type, _ = OrganizationalType.objects.get_or_create(
+                code='research',
+                defaults={
+                    'name': 'Research',
+                    'description': 'Research groups'
+                }
+            )
+            
+            # Get or create default campus for external groups
+            campus, _ = Campus.objects.get_or_create(
+                code='EXTERNAL',
+                defaults={
+                    'name': 'External',
+                    'location': 'External organizations'
+                }
+            )
+            
+            # Generate short name from full name
+            short_name = self.generate_short_name(normalized_name)
+            
+            # Create the unit
+            unit = OrganizationalUnit(
+                name=normalized_name,
+                short_name=short_name,
+                type=org_type,
+                organization=organization,
+                campus=campus,
+                knowledge_area=knowledge_area
+            )
+            # Save without calling full_clean() to avoid validation errors from schema conflicts
+            super(OrganizationalUnit, unit).save()
+            
+            return unit
+            
+        except IntegrityError:
+            # Race condition - another process created it
+            return OrganizationalUnit.objects.filter(
+                models.Q(name__iexact=normalized_name) | 
+                models.Q(short_name__iexact=normalized_name)
+            ).first()
+    
+    def get_or_create_demanding_partner(self, name: str, knowledge_area: Optional[KnowledgeArea] = None) -> Optional[OrganizationalUnit]:
+        """
+        Get or create a demanding partner organization (OrganizationalUnit).
+        
+        Args:
+            name: Demanding partner organization name
+            knowledge_area: Optional knowledge area to associate
+            
+        Returns:
+            OrganizationalUnit: Existing or newly created unit, or None if name is empty
+        """
+        if not name or not name.strip():
+            return None
+        
+        # Normalize name
+        normalized_name = self.normalize_name(name)
+        
+        # Try to find existing unit (case-insensitive)
+        unit = OrganizationalUnit.objects.filter(
+            models.Q(name__iexact=normalized_name) | 
+            models.Q(short_name__iexact=normalized_name)
+        ).first()
+        
+        if unit:
+            return unit
+        
+        # Create new demanding partner organization
+        try:
+            from apps.organizational_group.models import Organization, OrganizationalType, Campus
+            
+            # Get or create default organization for demanding partners
+            organization, _ = Organization.objects.get_or_create(
+                name='Demanding Partners',
+                defaults={'description': 'Organizations that demand or request initiatives'}
+            )
+            
+            # Get or create Extension type (demanding partners are typically extension/service clients)
+            org_type, _ = OrganizationalType.objects.get_or_create(
+                code='extension',
+                defaults={
+                    'name': 'Extension',
+                    'description': 'Extension and service organizations'
+                }
+            )
+            
+            # Get or create default campus for demanding partners
+            campus, _ = Campus.objects.get_or_create(
+                code='PARTNER',
+                defaults={
+                    'name': 'Partner Organizations',
+                    'location': 'External partner organizations'
+                }
+            )
+            
+            # Generate short name from full name
+            short_name = self.generate_short_name(normalized_name)
+            
+            # Create the unit
+            unit = OrganizationalUnit(
+                name=normalized_name,
+                short_name=short_name,
+                type=org_type,
+                organization=organization,
+                campus=campus,
+                knowledge_area=knowledge_area
+            )
+            # Save without calling full_clean() to avoid validation errors from schema conflicts
+            super(OrganizationalUnit, unit).save()
+            
+            return unit
+            
+        except IntegrityError:
+            # Race condition - another process created it
+            return OrganizationalUnit.objects.filter(
+                models.Q(name__iexact=normalized_name) | 
+                models.Q(short_name__iexact=normalized_name)
+            ).first()
+    
+    def generate_short_name(self, name: str) -> str:
+        """
+        Generate a short name from full name.
+        
+        Args:
+            name: Full name
+            
+        Returns:
+            str: Short name (acronym or truncated)
+        """
+        if not name:
+            return "EXT"
+        
+        # Try to create acronym from words
+        words = name.split()
+        if len(words) > 1:
+            acronym = ''.join([word[0].upper() for word in words if word])
+            return acronym[:20]  # Limit to 20 characters
+        
+        # If single word, truncate
+        return name[:20].upper()
+    
     def normalize_name(self, name: str) -> str:
         """
         Normalize name to Title Case.

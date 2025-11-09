@@ -182,6 +182,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         'name_display',
         'type_display',
         'coordinator_display',
+        'demanding_partner_display',
         'knowledge_areas_display',
         'start_date_display',
         'end_date_display',
@@ -189,6 +190,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         'student_count_display',
         'children_count_display',
         'unit_count_display',
+        'external_groups_count_display',
         'hierarchy_level_display',
         'status_display'
     ]
@@ -198,6 +200,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     list_filter = [
         'type',
         'knowledge_areas',
+        'demanding_partner',
         'start_date',
         'end_date',
         'coordinator',
@@ -221,9 +224,12 @@ class InitiativeAdmin(admin.ModelAdmin):
         'student_count_display',
         'children_count_display',
         'unit_count_display',
+        'external_groups_count_display',
+        'external_groups_list_display',
         'knowledge_areas_count_display',
         'hierarchy_level_display',
         'coordinator_name',
+        'demanding_partner_display',
         'status_display'
     ]
     
@@ -236,6 +242,10 @@ class InitiativeAdmin(admin.ModelAdmin):
         ('Knowledge Areas', {
             'fields': ('knowledge_areas',),
             'description': 'Knowledge areas associated with this initiative.'
+        }),
+        ('Organizations', {
+            'fields': ('demanding_partner', 'demanding_partner_display', 'external_groups_count_display', 'external_groups_list_display'),
+            'description': 'Organizational relationships: demanding partner and external research groups.'
         }),
         ('Timeline', {
             'fields': ('start_date', 'end_date'),
@@ -645,6 +655,74 @@ class InitiativeAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #999;">No units</span>')
     unit_count_display.short_description = 'Units'
     unit_count_display.admin_order_field = 'annotated_unit_count'
+    
+    def demanding_partner_display(self, obj):
+        """
+        Display demanding partner organization with link.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted demanding partner with link
+        """
+        if obj.demanding_partner:
+            url = reverse('admin:organizational_group_organizationalunit_change', args=[obj.demanding_partner.pk])
+            return format_html(
+                '<a href="{}" title="View demanding partner">{}</a>',
+                url,
+                obj.demanding_partner.name
+            )
+        return format_html('<span style="color: #999;">None</span>')
+    demanding_partner_display.short_description = 'Demanding Partner'
+    demanding_partner_display.admin_order_field = 'demanding_partner__name'
+    
+    def external_groups_count_display(self, obj):
+        """
+        Display count of external research groups.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted external groups count
+        """
+        count = obj.external_research_groups_count
+        
+        if count > 0:
+            return format_html(
+                '<strong>{}</strong> external group{}',
+                count,
+                's' if count != 1 else ''
+            )
+        return format_html('<span style="color: #999;">No external groups</span>')
+    external_groups_count_display.short_description = 'External Groups'
+    
+    def external_groups_list_display(self, obj):
+        """
+        Display list of external research groups with links.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted list of external groups
+        """
+        external_groups = obj.external_research_groups.all()
+        
+        if external_groups:
+            links = []
+            for group in external_groups:
+                url = reverse('admin:organizational_group_organizationalunit_change', args=[group.pk])
+                links.append(format_html(
+                    '<a href="{}" title="View {}">{}</a>',
+                    url,
+                    group.name,
+                    group.name
+                ))
+            return format_html('<br>'.join(links))
+        return format_html('<span style="color: #999;">No external research groups</span>')
+    external_groups_list_display.short_description = 'External Research Groups'
     
     def hierarchy_level_display(self, obj):
         """
