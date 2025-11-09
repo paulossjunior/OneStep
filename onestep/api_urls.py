@@ -19,7 +19,7 @@ from rest_framework_simplejwt.views import (
 # Import ViewSets
 from apps.people.views import PersonViewSet
 from apps.initiatives.views import InitiativeViewSet
-from apps.organizational_group.views import OrganizationalGroupViewSet
+from apps.organizational_group.views import OrganizationalGroupViewSet, CampusViewSet
 
 
 # API Root view
@@ -38,6 +38,7 @@ def api_root(request, format=None):
             'people': request.build_absolute_uri('/api/v1/people/'),
             'initiatives': request.build_absolute_uri('/api/v1/initiatives/'),
             'groups': request.build_absolute_uri('/api/v1/groups/'),
+            'campuses': request.build_absolute_uri('/api/v1/campuses/'),
             'auth': {
                 'token': request.build_absolute_uri('/api/v1/auth/token/'),
                 'token_refresh': request.build_absolute_uri('/api/v1/auth/token/refresh/'),
@@ -61,6 +62,7 @@ router = DefaultRouter()
 router.register(r'people', PersonViewSet, basename='person')
 router.register(r'initiatives', InitiativeViewSet, basename='initiative')
 router.register(r'organizationalgroup', OrganizationalGroupViewSet, basename='organizationalgroup')
+router.register(r'campuses', CampusViewSet, basename='campus')
 
 # API v1 URL patterns
 v1_patterns = [

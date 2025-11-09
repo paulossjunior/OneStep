@@ -5,6 +5,77 @@ from apps.core.models import TimestampedModel
 from datetime import date
 
 
+class Campus(TimestampedModel):
+    """
+    Represents a university campus location.
+    
+    Attributes:
+        name (CharField): Full campus name
+        code (CharField): Short campus code/identifier
+        location (CharField): Physical location or address
+    """
+    
+    name = models.CharField(
+        max_length=200,
+        help_text="Full campus name"
+    )
+    code = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Short campus code/identifier"
+    )
+    location = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text="Physical location or address"
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Campus'
+        verbose_name_plural = 'Campuses'
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['code']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the Campus.
+        
+        Returns:
+            str: Name of the campus
+        """
+        return self.name
+    
+    def clean(self):
+        """
+        Custom validation for the Campus model.
+        """
+        super().clean()
+        
+        if not self.name or not self.name.strip():
+            raise ValidationError({'name': 'Campus name cannot be empty.'})
+        
+        if not self.code or not self.code.strip():
+            raise ValidationError({'code': 'Campus code cannot be empty.'})
+        
+        if self.name:
+            self.name = self.name.strip()
+        
+        if self.code:
+            self.code = self.code.strip().upper()
+    
+    def group_count(self):
+        """
+        Returns count of organizational groups on this campus.
+        
+        Returns:
+            int: Number of organizational groups on this campus
+        """
+        return self.groups.count()
+
+
 class OrganizationalGroupLeadership(TimestampedModel):
     """
     Through model tracking leadership relationships with history.
@@ -113,7 +184,7 @@ class OrganizationalGroup(TimestampedModel):
         url (URLField): Organizational group website URL (optional)
         type (CharField): Organizational group type (Research or Extension)
         knowledge_area (CharField): Field of study or research domain
-        campus (CharField): University campus affiliation
+        campus (ForeignKey): University campus affiliation
         leaders (ManyToManyField): People who lead the organizational group (through OrganizationalGroupLeadership)
         members (ManyToManyField): People who are members of the organizational group
         initiatives (ManyToManyField): Initiatives associated with the organizational group
@@ -147,8 +218,10 @@ class OrganizationalGroup(TimestampedModel):
         max_length=200,
         help_text="Field of study or research domain"
     )
-    campus = models.CharField(
-        max_length=200,
+    campus = models.ForeignKey(
+        'Campus',
+        on_delete=models.PROTECT,
+        related_name='groups',
         help_text="University campus affiliation"
     )
     
@@ -180,13 +253,12 @@ class OrganizationalGroup(TimestampedModel):
             models.Index(fields=['name']),
             models.Index(fields=['short_name']),
             models.Index(fields=['type']),
-            models.Index(fields=['campus']),
             models.Index(fields=['knowledge_area']),
         ]
         constraints = [
             models.UniqueConstraint(
                 fields=['short_name', 'campus'],
-                name='unique_short_name_campus'
+                name='unique_short_name_campus_id'
             )
         ]
     
@@ -233,15 +305,15 @@ class OrganizationalGroup(TimestampedModel):
                 raise ValidationError({'url': 'Enter a valid URL.'})
         
         # Validate unique constraint for short_name + campus
-        if self.short_name and self.campus:
+        if self.short_name and self.campus_id:
             existing_group = OrganizationalGroup.objects.filter(
                 short_name__iexact=self.short_name,
-                campus__iexact=self.campus
+                campus_id=self.campus_id
             ).exclude(pk=self.pk)
             
             if existing_group.exists():
                 raise ValidationError({
-                    'short_name': f'An organizational group with short name "{self.short_name}" already exists on campus "{self.campus}".'
+                    'short_name': f'An organizational group with short name "{self.short_name}" already exists on campus "{self.campus.name}".'
                 })
     
     def get_current_leaders(self):

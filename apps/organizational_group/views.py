@@ -8,13 +8,100 @@ from django.core.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from apps.core.pagination import StandardResultsSetPagination
-from .models import OrganizationalGroup, OrganizationalGroupLeadership
+from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership
 from .serializers import (
+    CampusSerializer,
     OrganizationalGroupSerializer,
     OrganizationalGroupDetailSerializer,
     OrganizationalGroupCreateUpdateSerializer,
     OrganizationalGroupLeadershipSerializer
 )
+
+
+class CampusViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Campus entities through REST API.
+    
+    Provides CRUD operations for Campus management with proper
+    authentication, filtering, searching, and pagination.
+    
+    Endpoints:
+        GET /api/campuses/ - List all campuses with pagination and filtering
+        POST /api/campuses/ - Create new campus
+        GET /api/campuses/{id}/ - Retrieve campus details
+        PUT /api/campuses/{id}/ - Update campus (full update)
+        PATCH /api/campuses/{id}/ - Partial update campus
+        DELETE /api/campuses/{id}/ - Delete campus
+    """
+    
+    queryset = Campus.objects.all()
+    serializer_class = CampusSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['name', 'code']
+    search_fields = ['name', 'code', 'location']
+    ordering_fields = ['name', 'code', 'created_at', 'updated_at']
+    ordering = ['name']
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        """
+        Get optimized queryset with group count annotation.
+        
+        Annotates each campus with the count of associated organizational groups
+        for improved performance when displaying group counts.
+        
+        Returns:
+            QuerySet: Optimized Campus queryset with annotations
+        """
+        queryset = Campus.objects.annotate(
+            annotated_group_count=Count('groups', distinct=True)
+        )
+        return queryset
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete campus with proper error handling.
+        
+        Prevents deletion of campuses that have associated organizational groups
+        due to the PROTECT constraint on the foreign key relationship.
+        
+        Args:
+            request: HTTP request object
+            
+        Returns:
+            Response: Success response or error details
+        """
+        try:
+            instance = self.get_object()
+            
+            # Check if campus has associated groups
+            group_count = instance.groups.count()
+            if group_count > 0:
+                return Response(
+                    {
+                        'error': {
+                            'code': 'CAMPUS_HAS_GROUPS',
+                            'message': f'Cannot delete campus with {group_count} associated group(s)',
+                            'details': 'Remove all organizational groups from this campus before deletion.'
+                        }
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response(
+                {
+                    'error': {
+                        'code': 'DELETION_FAILED',
+                        'message': 'Failed to delete campus',
+                        'details': str(e)
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class OrganizationalGroupViewSet(viewsets.ModelViewSet):
@@ -39,7 +126,7 @@ class OrganizationalGroupViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['type', 'campus', 'knowledge_area']
+    filterset_fields = ['type', 'campus_id', 'knowledge_area']
     search_fields = ['name', 'short_name']
     ordering_fields = ['name', 'short_name', 'type', 'campus', 'created_at', 'updated_at']
     ordering = ['name']
@@ -50,12 +137,13 @@ class OrganizationalGroupViewSet(viewsets.ModelViewSet):
         Get optimized queryset with prefetched related data.
         
         Uses select_related and prefetch_related for performance optimization
-        to minimize database queries.
+        to minimize database queries. Includes campus data via select_related
+        to ensure nested campus information appears in responses.
         
         Returns:
             QuerySet: Optimized OrganizationalGroup queryset
         """
-        queryset = OrganizationalGroup.objects.select_related().prefetch_related(
+        queryset = OrganizationalGroup.objects.select_related('campus').prefetch_related(
             'members',
             'initiatives',
             Prefetch(

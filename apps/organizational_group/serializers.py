@@ -1,8 +1,85 @@
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import OrganizationalGroup, OrganizationalGroupLeadership
+from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership
 from apps.people.serializers import PersonSerializer
 from apps.initiatives.serializers import InitiativeSerializer
+
+
+class CampusSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Campus model.
+    
+    Provides serialization for Campus CRUD operations with proper validation
+    and additional computed fields for API responses.
+    """
+    
+    group_count = serializers.SerializerMethodField(
+        help_text="Number of organizational groups on this campus"
+    )
+    
+    class Meta:
+        model = Campus
+        fields = [
+            'id',
+            'name',
+            'code',
+            'location',
+            'group_count',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id',
+            'created_at',
+            'updated_at',
+            'group_count'
+        ]
+    
+    def get_group_count(self, obj):
+        """
+        Get the count of organizational groups on this campus.
+        
+        Args:
+            obj (Campus): Campus instance
+            
+        Returns:
+            int: Number of organizational groups on this campus
+        """
+        return obj.group_count()
+    
+    def validate_name(self, value):
+        """
+        Validate name field.
+        
+        Args:
+            value (str): Name value to validate
+            
+        Returns:
+            str: Validated and cleaned name
+            
+        Raises:
+            serializers.ValidationError: If name is empty after stripping
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Campus name cannot be empty.")
+        return value.strip()
+    
+    def validate_code(self, value):
+        """
+        Validate code field and auto-uppercase.
+        
+        Args:
+            value (str): Code value to validate
+            
+        Returns:
+            str: Validated, cleaned, and uppercased code
+            
+        Raises:
+            serializers.ValidationError: If code is empty after stripping
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Campus code cannot be empty.")
+        return value.strip().upper()
 
 
 class OrganizationalGroupLeadershipSerializer(serializers.ModelSerializer):
@@ -147,6 +224,12 @@ class OrganizationalGroupSerializer(serializers.ModelSerializer):
         help_text="Number of associated initiatives"
     )
     
+    # Nested campus data for read operations
+    campus = CampusSerializer(
+        read_only=True,
+        help_text="Campus information with complete details"
+    )
+    
     # Nested serialization for related objects (read-only)
     current_leaders = serializers.SerializerMethodField(
         help_text="List of current leaders with their details"
@@ -187,6 +270,7 @@ class OrganizationalGroupSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'type_display',
+            'campus',
             'current_leaders',
             'members',
             'initiatives',
@@ -318,24 +402,8 @@ class OrganizationalGroupSerializer(serializers.ModelSerializer):
         Raises:
             serializers.ValidationError: If validation fails
         """
-        # Validate unique constraint for short_name + campus
-        short_name = data.get('short_name')
-        campus = data.get('campus')
-        
-        if short_name and campus:
-            existing_group = OrganizationalGroup.objects.filter(
-                short_name__iexact=short_name,
-                campus__iexact=campus
-            )
-            
-            # Exclude current instance if updating
-            if self.instance:
-                existing_group = existing_group.exclude(pk=self.instance.pk)
-            
-            if existing_group.exists():
-                raise serializers.ValidationError({
-                    'short_name': f'A group with short name "{short_name}" already exists on campus "{campus}".'
-                })
+        # Note: Unique constraint validation for short_name + campus_id
+        # is handled by the database and model's clean method
         
         # Create a temporary instance for model validation
         instance = self.instance or OrganizationalGroup()
@@ -401,8 +469,16 @@ class OrganizationalGroupCreateUpdateSerializer(OrganizationalGroupSerializer):
     """
     Serializer for OrganizationalGroup creation and updates with write operations.
     
-    Handles member and initiative assignments that require special handling.
+    Handles member and initiative assignments that require special handling,
+    and campus_id for write operations.
     """
+    
+    # Write-only field for campus foreign key
+    campus_id = serializers.IntegerField(
+        write_only=True,
+        required=True,
+        help_text="ID of the campus where this group is located"
+    )
     
     # Allow writing to members and initiatives fields
     member_ids = serializers.ListField(
@@ -419,7 +495,61 @@ class OrganizationalGroupCreateUpdateSerializer(OrganizationalGroupSerializer):
     )
     
     class Meta(OrganizationalGroupSerializer.Meta):
-        fields = OrganizationalGroupSerializer.Meta.fields + ['member_ids', 'initiative_ids']
+        fields = OrganizationalGroupSerializer.Meta.fields + ['campus_id', 'member_ids', 'initiative_ids']
+    
+    def validate_campus_id(self, value):
+        """
+        Validate campus_id field.
+        
+        Args:
+            value (int): Campus ID to validate
+            
+        Returns:
+            int: Validated campus ID
+            
+        Raises:
+            serializers.ValidationError: If campus does not exist
+        """
+        try:
+            Campus.objects.get(pk=value)
+        except Campus.DoesNotExist:
+            raise serializers.ValidationError(f"Campus with ID {value} does not exist.")
+        return value
+    
+    def validate(self, data):
+        """
+        Object-level validation including unique constraint for short_name + campus_id.
+        
+        Args:
+            data (dict): Validated data dictionary
+            
+        Returns:
+            dict: Validated data
+            
+        Raises:
+            serializers.ValidationError: If validation fails
+        """
+        # Validate unique constraint for short_name + campus_id
+        short_name = data.get('short_name')
+        campus_id = data.get('campus_id')
+        
+        if short_name and campus_id:
+            existing_group = OrganizationalGroup.objects.filter(
+                short_name__iexact=short_name,
+                campus_id=campus_id
+            )
+            
+            # Exclude current instance if updating
+            if self.instance:
+                existing_group = existing_group.exclude(pk=self.instance.pk)
+            
+            if existing_group.exists():
+                raise serializers.ValidationError({
+                    'short_name': f'A group with short name "{short_name}" already exists on this campus.'
+                })
+        
+        # Call parent validation
+        return super().validate(data)
     
     def create(self, validated_data):
         """

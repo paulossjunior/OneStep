@@ -2,14 +2,21 @@
 
 ## Overview
 
-The Organizational Group API provides endpoints for managing university research and organizational groups. Groups can have leaders (with historical tracking), members, and associations with initiatives.
+The Organizational Group API provides endpoints for managing university campuses and organizational groups. The API includes:
 
-**Note:** This API uses the endpoint `/api/groups/` for backward compatibility, but the Django app is named `organizational_group` and the model is named `OrganizationalGroup` to avoid conflicts with Django's built-in `Group` model from `django.contrib.auth`.
+- **Campus Management**: Create and manage university campus locations
+- **Group Management**: Create and manage research and organizational groups
+- **Leadership Tracking**: Track current and historical group leaders
+- **Member Management**: Assign people as group members
+- **Initiative Associations**: Link groups to initiatives
 
-## Base URL
+**Note:** The groups API uses the endpoint `/api/groups/` for backward compatibility, but the Django app is named `organizational_group` and the model is named `OrganizationalGroup` to avoid conflicts with Django's built-in `Group` model from `django.contrib.auth`.
+
+## Base URLs
 
 ```
-/api/groups/
+/api/campuses/  - Campus management endpoints
+/api/groups/    - Organizational group management endpoints
 ```
 
 ## Authentication
@@ -20,9 +27,234 @@ All endpoints require JWT authentication. Include the access token in the Author
 Authorization: Bearer <access_token>
 ```
 
-## Endpoints
+## Campus Endpoints
 
-### 1. List Groups
+### 1. List Campuses
+
+**GET** `/api/campuses/`
+
+Retrieve a paginated list of all campuses with filtering, searching, and ordering capabilities.
+
+#### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Filter by campus name (exact match) |
+| `code` | string | Filter by campus code (exact match) |
+| `search` | string | Search across name, code, and location |
+| `ordering` | string | Order results by field (prefix with `-` for descending). Options: `name`, `code`, `created_at`, `updated_at` |
+| `page` | integer | Page number for pagination |
+| `page_size` | integer | Number of results per page (default: 10, max: 100) |
+
+#### Example Request
+
+```bash
+GET /api/campuses/?search=Main&ordering=name
+```
+
+#### Example Response
+
+```json
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "Main Campus",
+      "code": "MAIN",
+      "location": "123 University Ave, City, State 12345",
+      "group_count": 15,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "North Campus",
+      "code": "NORTH",
+      "location": "456 College Rd, City, State 12345",
+      "group_count": 8,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 2. Create Campus
+
+**POST** `/api/campuses/`
+
+Create a new campus location.
+
+#### Request Body
+
+```json
+{
+  "name": "South Campus",
+  "code": "SOUTH",
+  "location": "789 Education Blvd, City, State 12345"
+}
+```
+
+#### Field Descriptions
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Full campus name (max 200 characters) |
+| `code` | string | Yes | Short campus code (max 20 characters, unique, auto-uppercased) |
+| `location` | string | No | Physical location or address (max 300 characters) |
+
+#### Validation Rules
+
+- `name` and `code` are required and cannot be empty strings
+- `code` must be unique across all campuses
+- `code` is automatically converted to uppercase
+- `name` and `code` are trimmed of whitespace
+
+#### Example Response
+
+```json
+{
+  "id": 3,
+  "name": "South Campus",
+  "code": "SOUTH",
+  "location": "789 Education Blvd, City, State 12345",
+  "group_count": 0,
+  "created_at": "2024-01-15T14:00:00Z",
+  "updated_at": "2024-01-15T14:00:00Z"
+}
+```
+
+#### Status Codes
+
+- `201 Created` - Campus successfully created
+- `400 Bad Request` - Validation error (empty name/code, duplicate code)
+- `401 Unauthorized` - Authentication required
+
+---
+
+### 3. Get Campus Details
+
+**GET** `/api/campuses/{id}/`
+
+Retrieve detailed information about a specific campus.
+
+#### Path Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | integer | Campus ID |
+
+#### Example Request
+
+```bash
+GET /api/campuses/1/
+```
+
+#### Example Response
+
+```json
+{
+  "id": 1,
+  "name": "Main Campus",
+  "code": "MAIN",
+  "location": "123 University Ave, City, State 12345",
+  "group_count": 15,
+  "created_at": "2024-01-01T10:00:00Z",
+  "updated_at": "2024-01-01T10:00:00Z"
+}
+```
+
+#### Status Codes
+
+- `200 OK` - Success
+- `401 Unauthorized` - Authentication required
+- `404 Not Found` - Campus not found
+
+---
+
+### 4. Update Campus (Full)
+
+**PUT** `/api/campuses/{id}/`
+
+Perform a full update of a campus. All fields must be provided.
+
+#### Request Body
+
+```json
+{
+  "name": "Main Campus - Updated",
+  "code": "MAIN",
+  "location": "123 University Ave, Suite 100, City, State 12345"
+}
+```
+
+#### Status Codes
+
+- `200 OK` - Campus successfully updated
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Authentication required
+- `404 Not Found` - Campus not found
+
+---
+
+### 5. Update Campus (Partial)
+
+**PATCH** `/api/campuses/{id}/`
+
+Perform a partial update of a campus. Only provided fields will be updated.
+
+#### Example Request
+
+```json
+{
+  "location": "123 University Ave, Building A, City, State 12345"
+}
+```
+
+#### Status Codes
+
+- `200 OK` - Campus successfully updated
+- `400 Bad Request` - Validation error
+- `401 Unauthorized` - Authentication required
+- `404 Not Found` - Campus not found
+
+---
+
+### 6. Delete Campus
+
+**DELETE** `/api/campuses/{id}/`
+
+Delete a campus. This operation will fail if there are organizational groups associated with the campus (PROTECT constraint).
+
+#### Status Codes
+
+- `204 No Content` - Campus successfully deleted
+- `400 Bad Request` - Cannot delete campus with associated groups
+- `401 Unauthorized` - Authentication required
+- `404 Not Found` - Campus not found
+
+#### Error Response (when groups exist)
+
+```json
+{
+  "error": {
+    "code": "PROTECTED_ERROR",
+    "message": "Cannot delete campus with associated organizational groups",
+    "details": "This campus has 15 groups. Remove or reassign them before deleting the campus."
+  }
+}
+```
+
+---
+
+## Organizational Group Endpoints
+
+### 7. List Groups
 
 **GET** `/api/groups/`
 
@@ -33,7 +265,7 @@ Retrieve a paginated list of all groups with comprehensive filtering, searching,
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `type` | string | Filter by group type (`research` or `extension`) |
-| `campus` | string | Filter by campus name |
+| `campus_id` | integer | Filter by campus ID |
 | `knowledge_area` | string | Filter by knowledge area |
 | `search` | string | Search across name and short_name |
 | `ordering` | string | Order results by field (prefix with `-` for descending). Options: `name`, `short_name`, `type`, `campus`, `created_at`, `updated_at` |
@@ -43,7 +275,7 @@ Retrieve a paginated list of all groups with comprehensive filtering, searching,
 #### Example Request
 
 ```bash
-GET /api/groups/?type=research&campus=Main%20Campus&ordering=-created_at
+GET /api/groups/?type=research&campus_id=1&ordering=-created_at
 ```
 
 #### Example Response
@@ -61,7 +293,13 @@ GET /api/groups/?type=research&campus=Main%20Campus&ordering=-created_at
       "url": "https://ai-lab.university.edu",
       "type": "research",
       "knowledge_area": "Computer Science",
-      "campus": "Main Campus",
+      "campus": {
+        "id": 1,
+        "name": "Main Campus",
+        "code": "MAIN",
+        "location": "123 University Ave, City, State 12345",
+        "group_count": 15
+      },
       "current_leaders": [
         {
           "id": 1,
@@ -99,7 +337,7 @@ GET /api/groups/?type=research&campus=Main%20Campus&ordering=-created_at
 
 ---
 
-### 2. Create Group
+### 8. Create Group
 
 **POST** `/api/groups/`
 
@@ -114,7 +352,7 @@ Create a new group with basic information. Leaders and members can be added afte
   "url": "https://quantum.university.edu",
   "type": "research",
   "knowledge_area": "Physics",
-  "campus": "Main Campus",
+  "campus_id": 1,
   "leader_ids": [1, 2],
   "member_ids": [3, 4, 5],
   "initiative_ids": [1]
@@ -130,17 +368,18 @@ Create a new group with basic information. Leaders and members can be added afte
 | `url` | string | No | Group website URL |
 | `type` | string | Yes | Group type: `research` or `extension` |
 | `knowledge_area` | string | Yes | Research/study domain (max 200 characters) |
-| `campus` | string | Yes | University campus (max 200 characters) |
+| `campus_id` | integer | Yes | Campus ID (foreign key to Campus) |
 | `leader_ids` | array | No | List of person IDs to add as leaders |
 | `member_ids` | array | No | List of person IDs to add as members |
 | `initiative_ids` | array | No | List of initiative IDs to associate |
 
 #### Validation Rules
 
-- `name` and `short_name` are required
-- `short_name` + `campus` combination must be unique
+- `name`, `short_name`, and `campus_id` are required
+- `short_name` + `campus_id` combination must be unique
 - `type` must be either `research` or `extension`
 - `url` must be a valid URL format (if provided)
+- `campus_id` must reference an existing Campus
 
 #### Example Response
 
@@ -152,7 +391,13 @@ Create a new group with basic information. Leaders and members can be added afte
   "url": "https://quantum.university.edu",
   "type": "research",
   "knowledge_area": "Physics",
-  "campus": "Main Campus",
+  "campus": {
+    "id": 1,
+    "name": "Main Campus",
+    "code": "MAIN",
+    "location": "123 University Ave, City, State 12345",
+    "group_count": 16
+  },
   "current_leaders": [],
   "members": [],
   "initiatives": [],
@@ -167,13 +412,13 @@ Create a new group with basic information. Leaders and members can be added afte
 #### Status Codes
 
 - `201 Created` - Group successfully created
-- `400 Bad Request` - Validation error
+- `400 Bad Request` - Validation error (missing campus_id, invalid campus_id, duplicate short_name + campus_id)
 - `401 Unauthorized` - Authentication required
-- `409 Conflict` - Duplicate short_name + campus combination
+- `404 Not Found` - Campus not found
 
 ---
 
-### 3. Get Group Details
+### 9. Get Group Details
 
 **GET** `/api/groups/{id}/`
 
@@ -201,7 +446,13 @@ GET /api/groups/1/
   "url": "https://ai-lab.university.edu",
   "type": "research",
   "knowledge_area": "Computer Science",
-  "campus": "Main Campus",
+  "campus": {
+    "id": 1,
+    "name": "Main Campus",
+    "code": "MAIN",
+    "location": "123 University Ave, City, State 12345",
+    "group_count": 15
+  },
   "current_leaders": [
     {
       "id": 1,
@@ -259,7 +510,7 @@ GET /api/groups/1/
 
 ---
 
-### 4. Update Group (Full)
+### 10. Update Group (Full)
 
 **PUT** `/api/groups/{id}/`
 
@@ -267,18 +518,18 @@ Perform a full update of a group. All fields must be provided.
 
 #### Request Body
 
-Same as Create Group, all fields required.
+Same as Create Group, all fields required (including `campus_id`).
 
 #### Status Codes
 
 - `200 OK` - Group successfully updated
 - `400 Bad Request` - Validation error
 - `401 Unauthorized` - Authentication required
-- `404 Not Found` - Group not found
+- `404 Not Found` - Group or Campus not found
 
 ---
 
-### 5. Update Group (Partial)
+### 11. Update Group (Partial)
 
 **PATCH** `/api/groups/{id}/`
 
@@ -289,7 +540,8 @@ Perform a partial update of a group. Only provided fields will be updated.
 ```json
 {
   "url": "https://new-url.university.edu",
-  "knowledge_area": "Advanced Computer Science"
+  "knowledge_area": "Advanced Computer Science",
+  "campus_id": 2
 }
 ```
 
@@ -298,11 +550,11 @@ Perform a partial update of a group. Only provided fields will be updated.
 - `200 OK` - Group successfully updated
 - `400 Bad Request` - Validation error
 - `401 Unauthorized` - Authentication required
-- `404 Not Found` - Group not found
+- `404 Not Found` - Group or Campus not found
 
 ---
 
-### 6. Delete Group
+### 12. Delete Group
 
 **DELETE** `/api/groups/{id}/`
 
@@ -318,7 +570,7 @@ Delete a group. This will also remove all leadership relationships, member assoc
 
 ## Custom Actions
 
-### 7. Get Current Leaders
+### 13. Get Current Leaders
 
 **GET** `/api/groups/{id}/current_leaders/`
 
@@ -347,7 +599,7 @@ Retrieve only the current active leaders for a group.
 
 ---
 
-### 8. Add Leader
+### 14. Add Leader
 
 **POST** `/api/groups/{id}/add_leader/`
 
@@ -396,7 +648,7 @@ Add a person as a leader to the group. Creates a new leadership relationship wit
 
 ---
 
-### 9. Remove Leader
+### 15. Remove Leader
 
 **POST** `/api/groups/{id}/remove_leader/`
 
@@ -436,7 +688,7 @@ Remove a person as a leader from the group. Sets the leadership end date and mar
 
 ---
 
-### 10. Get Leadership History
+### 16. Get Leadership History
 
 **GET** `/api/groups/{id}/leadership_history/`
 
@@ -480,6 +732,20 @@ Retrieve the complete leadership history for a group, including both current and
 
 ## Data Models
 
+### Campus
+
+```json
+{
+  "id": integer,
+  "name": string,
+  "code": string,  // Unique, auto-uppercased
+  "location": string,
+  "group_count": integer,  // Computed field
+  "created_at": datetime,
+  "updated_at": datetime
+}
+```
+
 ### OrganizationalGroup
 
 ```json
@@ -490,7 +756,13 @@ Retrieve the complete leadership history for a group, including both current and
   "url": string,
   "type": string,  // "research" or "extension"
   "knowledge_area": string,
-  "campus": string,
+  "campus": {  // Nested Campus object (read-only)
+    "id": integer,
+    "name": string,
+    "code": string,
+    "location": string,
+    "group_count": integer
+  },
   "current_leaders": [OrganizationalGroupLeadership],
   "members": [Person],
   "initiatives": [Initiative],
@@ -501,6 +773,8 @@ Retrieve the complete leadership history for a group, including both current and
   "updated_at": datetime
 }
 ```
+
+**Note:** When creating or updating a group, use `campus_id` (integer) instead of the nested `campus` object.
 
 ### OrganizationalGroupLeadership
 
@@ -539,9 +813,11 @@ All error responses follow this format:
 | `MISSING_PERSON_ID` | person_id is required in request body |
 | `PERSON_NOT_FOUND` | Person with given ID does not exist |
 | `VALIDATION_ERROR` | Data validation failed |
-| `CREATION_FAILED` | Failed to create group |
-| `UPDATE_FAILED` | Failed to update group |
-| `DELETION_FAILED` | Failed to delete group |
+| `CAMPUS_NOT_FOUND` | Campus with given ID does not exist |
+| `PROTECTED_ERROR` | Cannot delete campus with associated groups |
+| `CREATION_FAILED` | Failed to create campus or group |
+| `UPDATE_FAILED` | Failed to update campus or group |
+| `DELETION_FAILED` | Failed to delete campus or group |
 | `ADD_LEADER_FAILED` | Failed to add leader |
 | `REMOVE_LEADER_FAILED` | Failed to remove leader |
 
@@ -549,7 +825,27 @@ All error responses follow this format:
 
 ## Examples
 
-### Example 1: Create a Research Group with Leaders
+### Example 1: Create a Campus
+
+```bash
+curl -X POST http://localhost:8000/api/campuses/ \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "West Campus",
+    "code": "west",
+    "location": "999 Research Park Dr, City, State 12345"
+  }'
+```
+
+### Example 2: List Campuses with Group Counts
+
+```bash
+curl -X GET "http://localhost:8000/api/campuses/?ordering=-group_count" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### Example 3: Create a Research Group with Campus
 
 ```bash
 curl -X POST http://localhost:8000/api/groups/ \
@@ -561,20 +857,20 @@ curl -X POST http://localhost:8000/api/groups/ \
     "url": "https://ml.university.edu",
     "type": "research",
     "knowledge_area": "Artificial Intelligence",
-    "campus": "Main Campus",
+    "campus_id": 1,
     "leader_ids": [1, 2],
     "member_ids": [3, 4, 5]
   }'
 ```
 
-### Example 2: Search for Groups
+### Example 4: Search for Groups
 
 ```bash
 curl -X GET "http://localhost:8000/api/groups/?search=AI&type=research" \
   -H "Authorization: Bearer <access_token>"
 ```
 
-### Example 3: Add a Leader with Start Date
+### Example 5: Add a Leader with Start Date
 
 ```bash
 curl -X POST http://localhost:8000/api/groups/1/add_leader/ \
@@ -586,18 +882,29 @@ curl -X POST http://localhost:8000/api/groups/1/add_leader/ \
   }'
 ```
 
-### Example 4: Get Leadership History
+### Example 6: Get Leadership History
 
 ```bash
 curl -X GET http://localhost:8000/api/groups/1/leadership_history/ \
   -H "Authorization: Bearer <access_token>"
 ```
 
-### Example 5: Filter Groups by Campus and Knowledge Area
+### Example 7: Filter Groups by Campus and Knowledge Area
 
 ```bash
-curl -X GET "http://localhost:8000/api/groups/?campus=Main%20Campus&knowledge_area=Computer%20Science&ordering=-created_at" \
+curl -X GET "http://localhost:8000/api/groups/?campus_id=1&knowledge_area=Computer%20Science&ordering=-created_at" \
   -H "Authorization: Bearer <access_token>"
+```
+
+### Example 8: Update Group Campus
+
+```bash
+curl -X PATCH http://localhost:8000/api/groups/5/ \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "campus_id": 2
+  }'
 ```
 
 ---
@@ -606,7 +913,10 @@ curl -X GET "http://localhost:8000/api/groups/?campus=Main%20Campus&knowledge_ar
 
 - All timestamps are in ISO 8601 format (UTC)
 - Pagination is applied to list endpoints with default page_size of 10
-- The `short_name` + `campus` combination must be unique across all groups
+- Campus `code` is automatically converted to uppercase
+- The `short_name` + `campus_id` combination must be unique across all groups
+- Cannot delete a Campus that has associated groups (PROTECT constraint)
 - Leadership history is automatically maintained when adding/removing leaders
 - Deleting a group will cascade delete all leadership relationships
 - Members and initiatives use many-to-many relationships and are not deleted when a group is deleted
+- When creating/updating groups, use `campus_id` (integer); responses include nested `campus` object

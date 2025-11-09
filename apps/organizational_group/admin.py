@@ -2,7 +2,153 @@ from django.contrib import admin
 from django.db import models
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import OrganizationalGroup, OrganizationalGroupLeadership
+from .models import OrganizationalGroup, OrganizationalGroupLeadership, Campus
+
+
+@admin.register(Campus)
+class CampusAdmin(admin.ModelAdmin):
+    """
+    Django Admin configuration for Campus model.
+    
+    Provides comprehensive administrative interface for managing Campus entities
+    with proper display, filtering, and search capabilities.
+    """
+    
+    # List view configuration
+    list_display = [
+        'name',
+        'code',
+        'location',
+        'group_count_display',
+        'created_at'
+    ]
+    
+    list_display_links = ['name']
+    
+    list_filter = [
+        'created_at',
+        'updated_at'
+    ]
+    
+    # Search fields
+    search_fields = [
+        'name',
+        'code',
+        'location'
+    ]
+    
+    readonly_fields = [
+        'id',
+        'created_at',
+        'updated_at',
+        'group_count_display'
+    ]
+    
+    # Form layout configuration
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'code', 'location'),
+            'description': 'Basic information about the campus.'
+        }),
+        ('Statistics', {
+            'fields': ('group_count_display',),
+            'classes': ('collapse',),
+            'description': 'Computed statistics.'
+        }),
+        ('System Information', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',),
+            'description': 'System-generated information and metadata.'
+        })
+    )
+    
+    # Pagination and performance
+    list_per_page = 25
+    list_max_show_all = 100
+    
+    # Ordering
+    ordering = ['name']
+    
+    def get_queryset(self, request):
+        """
+        Optimize queryset with annotations for better performance.
+        
+        Args:
+            request: HTTP request object
+            
+        Returns:
+            QuerySet: Optimized queryset with annotated group count
+        """
+        queryset = super().get_queryset(request)
+        
+        # Add annotation for group count to improve performance
+        queryset = queryset.annotate(
+            annotated_group_count=models.Count('groups', distinct=True)
+        )
+        
+        return queryset
+    
+    def group_count_display(self, obj):
+        """
+        Display count of organizational groups on this campus with HTML formatting.
+        
+        Args:
+            obj (Campus): Campus instance
+            
+        Returns:
+            str: HTML formatted group count
+        """
+        count = getattr(obj, 'annotated_group_count', obj.group_count())
+        
+        if count > 0:
+            return format_html(
+                '<strong>{}</strong> group{}',
+                count,
+                's' if count != 1 else ''
+            )
+        else:
+            return format_html('<span style="color: #999;">No groups</span>')
+    group_count_display.short_description = 'Groups'
+    group_count_display.admin_order_field = 'annotated_group_count'
+    
+    def save_model(self, request, obj, form, change):
+        """
+        Custom save method with additional validation.
+        
+        Args:
+            request: HTTP request object
+            obj: Campus instance being saved
+            form: Admin form instance
+            change: Boolean indicating if this is an update
+        """
+        # Run model validation
+        obj.full_clean()
+        super().save_model(request, obj, form, change)
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Customize form with helpful text.
+        
+        Args:
+            request: HTTP request object
+            obj: Campus instance (None for add form)
+            
+        Returns:
+            Form class: Customized admin form
+        """
+        form = super().get_form(request, obj, **kwargs)
+        
+        # Add help text to fields
+        if 'name' in form.base_fields:
+            form.base_fields['name'].help_text = 'Full campus name.'
+        
+        if 'code' in form.base_fields:
+            form.base_fields['code'].help_text = 'Short campus code/identifier (will be auto-uppercased).'
+        
+        if 'location' in form.base_fields:
+            form.base_fields['location'].help_text = 'Physical location or address (optional).'
+        
+        return form
 
 
 class OrganizationalGroupLeadershipInline(admin.TabularInline):
@@ -102,7 +248,7 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
         'name',
         'short_name',
         'type_display',
-        'campus',
+        'campus_display',
         'knowledge_area',
         'leader_count_display',
         'member_count_display',
@@ -125,7 +271,8 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
         'name',
         'short_name',
         'knowledge_area',
-        'campus'
+        'campus__name',
+        'campus__code'
     ]
     
     readonly_fields = [
@@ -170,7 +317,7 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
     ordering = ['name']
     
     # Autocomplete fields
-    autocomplete_fields = []
+    autocomplete_fields = ['campus']
     
     def get_queryset(self, request):
         """
@@ -183,6 +330,9 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
             QuerySet: Optimized queryset with related data
         """
         queryset = super().get_queryset(request)
+        
+        # Optimize with select_related for foreign keys
+        queryset = queryset.select_related('campus')
         
         # Optimize with prefetch_related
         queryset = queryset.prefetch_related(
@@ -228,6 +378,27 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
         )
     type_display.short_description = 'Type'
     type_display.admin_order_field = 'type'
+    
+    def campus_display(self, obj):
+        """
+        Display campus name with code.
+        
+        Args:
+            obj (OrganizationalGroup): OrganizationalGroup instance
+            
+        Returns:
+            str: HTML formatted campus name with code
+        """
+        if obj.campus:
+            return format_html(
+                '{} <span style="color: #999;">({})</span>',
+                obj.campus.name,
+                obj.campus.code
+            )
+        else:
+            return format_html('<span style="color: #999;">No campus</span>')
+    campus_display.short_description = 'Campus'
+    campus_display.admin_order_field = 'campus__name'
     
     def leader_count_display(self, obj):
         """
