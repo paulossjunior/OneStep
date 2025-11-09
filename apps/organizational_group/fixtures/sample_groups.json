@@ -1,0 +1,337 @@
+[
+  {
+    "model": "groups.group",
+    "pk": 1,
+    "fields": {
+      "name": "Artificial Intelligence Research Lab",
+      "short_name": "AI-LAB",
+      "url": "https://ai-lab.university.edu",
+      "type": "research",
+      "knowledge_area": "Computer Science",
+      "campus": "Main Campus",
+      "created_at": "2024-01-01T14:00:00Z",
+      "updated_at": "2024-01-01T14:00:00Z"
+    }
+  },
+  {
+    "model": "groups.group",
+    "pk": 2,
+    "fields": {
+      "name": "Sustainable Agriculture Extension",
+      "short_name": "SAE",
+      "url": "https://sae.university.edu",
+      "type": "extension",
+      "knowledge_area": "Agricultural Sciences",
+      "campus": "North Campus",
+      "created_at": "2024-01-01T14:15:00Z",
+      "updated_at": "2024-01-01T14:15:00Z"
+    }
+  },
+  {
+    "model": "groups.group",
+    "pk": 3,
+    "fields": {
+      "name": "Biomedical Engineering Research Group",
+      "short_name": "BERG",
+      "url": "https://berg.university.edu",
+      "type": "research",
+      "knowledge_area": "Biomedical Engineering",
+      "campus": "Medical Campus",
+      "created_at": "2024-01-01T14:30:00Z",
+      "updated_at": "2024-01-01T14:30:00Z"
+    }
+  },
+  {
+    "model": "groups.group",
+    "pk": 4,
+    "fields": {
+      "name": "Community Health Outreach",
+      "short_name": "CHO",
+      "url": "",
+      "type": "extension",
+      "knowledge_area": "Public Health",
+      "campus": "Main Campus",
+      "created_at": "2024-01-01T14:45:00Z",
+      "updated_at": "2024-01-01T14:45:00Z"
+    }
+  },
+  {
+    "model": "groups.group",
+    "pk": 5,
+    "fields": {
+      "name": "Quantum Computing Lab",
+      "short_name": "QC-LAB",
+      "url": "https://quantum.university.edu",
+      "type": "research",
+      "knowledge_area": "Physics",
+      "campus": "Main Campus",
+      "created_at": "2024-01-01T15:00:00Z",
+      "updated_at": "2024-01-01T15:00:00Z"
+    }
+  },
+  {
+    "model": "groups.group",
+    "pk": 6,
+    "fields": {
+      "name": "Environmental Science Research Center",
+      "short_name": "ESRC",
+      "url": "https://esrc.university.edu",
+      "type": "research",
+      "knowledge_area": "Environmental Science",
+      "campus": "North Campus",
+      "created_at": "2024-01-01T15:15:00Z",
+      "updated_at": "2024-01-01T15:15:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 1,
+    "fields": {
+      "group": 1,
+      "person": 1,
+      "start_date": "2023-01-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T14:00:00Z",
+      "updated_at": "2024-01-01T14:00:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 2,
+    "fields": {
+      "group": 1,
+      "person": 2,
+      "start_date": "2024-01-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T14:00:00Z",
+      "updated_at": "2024-01-01T14:00:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 3,
+    "fields": {
+      "group": 2,
+      "person": 3,
+      "start_date": "2022-06-01",
+      "end_date": "2023-12-31",
+      "is_active": false,
+      "created_at": "2024-01-01T14:15:00Z",
+      "updated_at": "2024-01-01T14:15:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 4,
+    "fields": {
+      "group": 2,
+      "person": 4,
+      "start_date": "2024-01-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T14:15:00Z",
+      "updated_at": "2024-01-01T14:15:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 5,
+    "fields": {
+      "group": 3,
+      "person": 5,
+      "start_date": "2023-09-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T14:30:00Z",
+      "updated_at": "2024-01-01T14:30:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 6,
+    "fields": {
+      "group": 4,
+      "person": 1,
+      "start_date": "2023-03-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T14:45:00Z",
+      "updated_at": "2024-01-01T14:45:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 7,
+    "fields": {
+      "group": 5,
+      "person": 2,
+      "start_date": "2024-02-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T15:00:00Z",
+      "updated_at": "2024-01-01T15:00:00Z"
+    }
+  },
+  {
+    "model": "groups.groupleadership",
+    "pk": 8,
+    "fields": {
+      "group": 6,
+      "person": 3,
+      "start_date": "2023-07-01",
+      "end_date": null,
+      "is_active": true,
+      "created_at": "2024-01-01T15:15:00Z",
+      "updated_at": "2024-01-01T15:15:00Z"
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 1,
+      "person": 3
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 1,
+      "person": 4
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 1,
+      "person": 5
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 2,
+      "person": 1
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 2,
+      "person": 2
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 2,
+      "person": 5
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 3,
+      "person": 1
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 3,
+      "person": 2
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 4,
+      "person": 2
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 4,
+      "person": 3
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 4,
+      "person": 4
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 5,
+      "person": 1
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 5,
+      "person": 3
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 6,
+      "person": 4
+    }
+  },
+  {
+    "model": "groups.group_members",
+    "fields": {
+      "group": 6,
+      "person": 5
+    }
+  },
+  {
+    "model": "groups.group_initiatives",
+    "fields": {
+      "group": 1,
+      "initiative": 1
+    }
+  },
+  {
+    "model": "groups.group_initiatives",
+    "fields": {
+      "group": 1,
+      "initiative": 2
+    }
+  },
+  {
+    "model": "groups.group_initiatives",
+    "fields": {
+      "group": 2,
+      "initiative": 5
+    }
+  },
+  {
+    "model": "groups.group_initiatives",
+    "fields": {
+      "group": 3,
+      "initiative": 1
+    }
+  },
+  {
+    "model": "groups.group_initiatives",
+    "fields": {
+      "group": 4,
+      "initiative": 4
+    }
+  },
+  {
+    "model": "groups.group_initiatives",
+    "fields": {
+      "group": 5,
+      "initiative": 3
+    }
+  }
+]

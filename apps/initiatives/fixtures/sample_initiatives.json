@@ -1,0 +1,113 @@
+[
+  {
+    "model": "initiatives.initiativetype",
+    "pk": 1,
+    "fields": {
+      "name": "Program",
+      "code": "program",
+      "description": "High-level strategic initiatives with long-term goals",
+      "is_active": true,
+      "created_at": "2024-01-01T09:00:00Z",
+      "updated_at": "2024-01-01T09:00:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiativetype",
+    "pk": 2,
+    "fields": {
+      "name": "Project",
+      "code": "project",
+      "description": "Specific deliverable-focused work with defined scope",
+      "is_active": true,
+      "created_at": "2024-01-01T09:00:00Z",
+      "updated_at": "2024-01-01T09:00:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiativetype",
+    "pk": 3,
+    "fields": {
+      "name": "Event",
+      "code": "event",
+      "description": "Time-bound activities and gatherings",
+      "is_active": true,
+      "created_at": "2024-01-01T09:00:00Z",
+      "updated_at": "2024-01-01T09:00:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiative",
+    "pk": 1,
+    "fields": {
+      "name": "Digital Transformation Program",
+      "description": "Comprehensive digital transformation initiative to modernize our technology stack and processes.",
+      "type": 1,
+      "start_date": "2024-02-01",
+      "end_date": "2025-01-31",
+      "parent": null,
+      "coordinator": 1,
+      "created_at": "2024-01-01T11:00:00Z",
+      "updated_at": "2024-01-01T11:00:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiative",
+    "pk": 2,
+    "fields": {
+      "name": "Customer Portal Development",
+      "description": "Build a new customer-facing portal for self-service and account management.",
+      "type": 2,
+      "start_date": "2024-03-01",
+      "end_date": "2024-06-30",
+      "parent": 1,
+      "coordinator": 2,
+      "created_at": "2024-01-01T11:30:00Z",
+      "updated_at": "2024-01-01T11:30:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiative",
+    "pk": 3,
+    "fields": {
+      "name": "Mobile App Development",
+      "description": "Develop native mobile applications for iOS and Android platforms.",
+      "type": 2,
+      "start_date": "2024-04-01",
+      "end_date": "2024-09-30",
+      "parent": 1,
+      "coordinator": 3,
+      "created_at": "2024-01-01T12:00:00Z",
+      "updated_at": "2024-01-01T12:00:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiative",
+    "pk": 4,
+    "fields": {
+      "name": "Annual Company Conference",
+      "description": "Three-day conference featuring keynotes, workshops, and networking sessions.",
+      "type": 3,
+      "start_date": "2024-06-15",
+      "end_date": "2024-06-17",
+      "parent": null,
+      "coordinator": 4,
+      "created_at": "2024-01-01T12:30:00Z",
+      "updated_at": "2024-01-01T12:30:00Z"
+    }
+  },
+  {
+    "model": "initiatives.initiative",
+    "pk": 5,
+    "fields": {
+      "name": "Employee Development Program",
+      "description": "Multi-year program to enhance employee skills and career development opportunities.",
+      "type": 1,
+      "start_date": "2024-01-15",
+      "end_date": "2025-12-31",
+      "parent": null,
+      "coordinator": 5,
+      "created_at": "2024-01-01T13:00:00Z",
+      "updated_at": "2024-01-01T13:00:00Z"
+    }
+  }
+]

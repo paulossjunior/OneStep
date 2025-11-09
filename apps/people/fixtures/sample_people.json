@@ -1,0 +1,52 @@
+[
+  {
+    "model": "people.person",
+    "pk": 1,
+    "fields": {
+      "name": "Alice Johnson",
+      "email": "alice.johnson@onestep.example.com",
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "people.person",
+    "pk": 2,
+    "fields": {
+      "name": "Bob Smith",
+      "email": "bob.smith@onestep.example.com",
+      "created_at": "2024-01-01T10:05:00Z",
+      "updated_at": "2024-01-01T10:05:00Z"
+    }
+  },
+  {
+    "model": "people.person",
+    "pk": 3,
+    "fields": {
+      "name": "Carol Davis",
+      "email": "carol.davis@onestep.example.com",
+      "created_at": "2024-01-01T10:10:00Z",
+      "updated_at": "2024-01-01T10:10:00Z"
+    }
+  },
+  {
+    "model": "people.person",
+    "pk": 4,
+    "fields": {
+      "name": "David Wilson",
+      "email": "david.wilson@onestep.example.com",
+      "created_at": "2024-01-01T10:15:00Z",
+      "updated_at": "2024-01-01T10:15:00Z"
+    }
+  },
+  {
+    "model": "people.person",
+    "pk": 5,
+    "fields": {
+      "name": "Emma Brown",
+      "email": "emma.brown@onestep.example.com",
+      "created_at": "2024-01-01T10:20:00Z",
+      "updated_at": "2024-01-01T10:20:00Z"
+    }
+  }
+]
