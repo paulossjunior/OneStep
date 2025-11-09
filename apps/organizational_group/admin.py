@@ -738,7 +738,9 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
         'updated_at',
         'leader_count_display',
         'member_count_display',
-        'initiative_count_display'
+        'initiative_count_display',
+        'demanded_initiatives_count_display',
+        'demanded_initiatives_list_display'
     ]
     
     # Form layout configuration
@@ -750,6 +752,10 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
         ('Classification', {
             'fields': ('type', 'knowledge_area', 'campus'),
             'description': 'Group classification and affiliation.'
+        }),
+        ('Demanded Initiatives', {
+            'fields': ('demanded_initiatives_count_display', 'demanded_initiatives_list_display'),
+            'description': 'Initiatives demanded/requested by this organizational unit (for demanding partners).'
         }),
         ('Statistics', {
             'fields': ('leader_count_display', 'member_count_display', 'initiative_count_display'),
@@ -948,6 +954,62 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #999;">No initiatives</span>')
     initiative_count_display.short_description = 'Initiatives'
     initiative_count_display.admin_order_field = 'annotated_initiative_count'
+    
+    def demanded_initiatives_count_display(self, obj):
+        """
+        Display count of initiatives demanded by this organizational unit.
+        
+        Args:
+            obj (OrganizationalGroup): OrganizationalGroup instance
+            
+        Returns:
+            str: HTML formatted demanded initiatives count
+        """
+        if hasattr(obj, 'demanded_initiatives'):
+            count = obj.demanded_initiatives.count()
+            if count > 0:
+                return format_html(
+                    '<strong>{}</strong> initiative{} demanded',
+                    count,
+                    's' if count != 1 else ''
+                )
+        return format_html('<span style="color: #999;">No demanded initiatives</span>')
+    demanded_initiatives_count_display.short_description = 'Demanded Initiatives'
+    
+    def demanded_initiatives_list_display(self, obj):
+        """
+        Display list of initiatives demanded by this organizational unit.
+        
+        Args:
+            obj (OrganizationalGroup): OrganizationalGroup instance
+            
+        Returns:
+            str: HTML formatted list of demanded initiatives
+        """
+        if not hasattr(obj, 'demanded_initiatives'):
+            return format_html('<span style="color: #999;">No demanded initiatives</span>')
+        
+        initiatives = obj.demanded_initiatives.all().select_related('type', 'coordinator')
+        
+        if not initiatives:
+            return format_html('<span style="color: #999;">This unit has not demanded any initiatives</span>')
+        
+        links = []
+        for initiative in initiatives:
+            url = reverse('admin:initiatives_initiative_change', args=[initiative.pk])
+            type_name = initiative.type.name if initiative.type else 'Unknown'
+            coordinator_name = initiative.coordinator.full_name if initiative.coordinator else 'No coordinator'
+            
+            links.append(format_html(
+                '<a href="{}" title="Coordinator: {}">{}</a> <span style="color: #666;">({})</span>',
+                url,
+                coordinator_name,
+                initiative.name,
+                type_name
+            ))
+        
+        return format_html('<br>'.join(links))
+    demanded_initiatives_list_display.short_description = 'Demanded Initiatives List'
     
     # Form validation and customization
     def save_model(self, request, obj, form, change):
