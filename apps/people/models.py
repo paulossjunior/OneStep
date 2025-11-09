@@ -4,6 +4,78 @@ from django.core.validators import RegexValidator
 from apps.core.models import TimestampedModel
 
 
+class PersonEmail(TimestampedModel):
+    """
+    Email addresses associated with a Person.
+    
+    Allows a person to have multiple email addresses.
+    
+    Attributes:
+        person (ForeignKey): Person this email belongs to
+        email (EmailField): Email address (unique)
+        is_primary (BooleanField): Whether this is the primary email
+    """
+    
+    person = models.ForeignKey(
+        'Person',
+        on_delete=models.CASCADE,
+        related_name='emails',
+        help_text="Person this email belongs to"
+    )
+    email = models.EmailField(
+        unique=True,
+        help_text="Email address (must be unique across all people)"
+    )
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Whether this is the primary email for this person"
+    )
+    
+    class Meta:
+        ordering = ['-is_primary', 'email']
+        verbose_name = 'Person Email'
+        verbose_name_plural = 'Person Emails'
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['person', 'is_primary']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['person', 'email'],
+                name='unique_person_email'
+            )
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the PersonEmail.
+        
+        Returns:
+            str: Email address
+        """
+        return self.email
+    
+    def clean(self):
+        """
+        Custom validation for the PersonEmail model.
+        """
+        super().clean()
+        
+        # Normalize email
+        if self.email:
+            self.email = self.email.lower().strip()
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to ensure only one primary email per person.
+        """
+        if self.is_primary:
+            # Set all other emails for this person to non-primary
+            PersonEmail.objects.filter(person=self.person, is_primary=True).update(is_primary=False)
+        
+        super().save(*args, **kwargs)
+
+
 class Person(TimestampedModel):
     """
     Person model representing individuals who can coordinate or participate in initiatives.
@@ -18,8 +90,9 @@ class Person(TimestampedModel):
         help_text="Person's full name"
     )
     email = models.EmailField(
-        unique=True,
-        help_text="Person's email address (must be unique)"
+        blank=True,
+        null=True,
+        help_text="Person's primary email address (optional)"
     )
     
     class Meta:
@@ -64,12 +137,9 @@ class Person(TimestampedModel):
         if self.name:
             self.name = self.name.strip()
         
-        # Validate email uniqueness (case-insensitive)
+        # Normalize email if provided
         if self.email:
-            self.email = self.email.lower()
-            existing_person = Person.objects.filter(email__iexact=self.email).exclude(pk=self.pk).first()
-            if existing_person:
-                raise ValidationError({'email': 'A person with this email already exists.'})
+            self.email = self.email.lower().strip()
     
     def get_coordinated_initiatives_count(self):
         """

@@ -137,3 +137,39 @@ This specification defines the requirements for importing research project data 
 3. THE System SHALL report the number of skipped duplicate projects
 4. THE System SHALL report the number of rows with errors
 5. THE System SHALL provide a list of errors with row numbers and error messages
+
+### Requirement 11: Django Admin Integration
+
+**User Story:** As a system administrator, I want to import research projects through the Django admin interface, so that I can easily upload CSV files without using command-line tools.
+
+#### Acceptance Criteria
+
+1. THE System SHALL provide a custom admin view for CSV file upload in the Initiative admin
+2. THE System SHALL display an "Import Research Projects from CSV" button in the Initiative changelist page
+3. WHEN the import button is clicked, THEN THE System SHALL display a file upload form
+4. THE System SHALL validate that the uploaded file has a .csv extension
+5. THE System SHALL display success, warning, and error messages after import completion
+
+### Requirement 12: Admin Import Form
+
+**User Story:** As a system administrator, I want clear instructions on the CSV format, so that I can prepare my data correctly.
+
+#### Acceptance Criteria
+
+1. THE System SHALL display a CSV format documentation table on the upload form
+2. THE System SHALL indicate which columns are required and which are optional
+3. THE System SHALL provide example values for each column
+4. THE System SHALL explain the date format (DD-MM-YY)
+5. THE System SHALL explain how to format lists (semicolon-separated)
+
+### Requirement 13: Admin Import Feedback
+
+**User Story:** As a system administrator, I want clear feedback after import, so that I know what succeeded and what failed.
+
+#### Acceptance Criteria
+
+1. WHEN import succeeds, THE System SHALL display a success message with the count of imported projects
+2. WHEN duplicates are skipped, THE System SHALL display a warning message with the count
+3. WHEN errors occur, THE System SHALL display error messages with row numbers
+4. THE System SHALL limit error display to the first 10 errors to avoid overwhelming the interface
+5. WHEN more than 10 errors exist, THE System SHALL indicate the count of additional errors

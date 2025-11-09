@@ -1,0 +1,165 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .csv-format-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .csv-format-table th,
+        .csv-format-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .csv-format-table th {
+            background-color: #417690;
+            color: white;
+            font-weight: bold;
+        }
+        .csv-format-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .required {
+            color: #ba2121;
+            font-weight: bold;
+        }
+        .format-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-left: 4px solid #417690;
+        }
+        .example-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+    </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:initiatives_initiative_changelist' %}">Initiatives</a>
+    &rsaquo; Import Research Projects from CSV
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Import Research Projects from CSV</h1>
+
+<div class="format-section">
+    <h2>Upload CSV File</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-row">
+            <div>
+                <label for="csv_file">CSV File:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+            </div>
+        </div>
+        <div class="submit-row">
+            <input type="submit" value="Import" class="default">
+            <a href="{% url 'admin:initiatives_initiative_changelist' %}" class="button cancel-link">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="format-section">
+    <h2>CSV Format Documentation</h2>
+    
+    <h3>Required Columns</h3>
+    <table class="csv-format-table">
+        <thead>
+            <tr>
+                <th>Column Name</th>
+                <th>Required</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Titulo</strong></td>
+                <td><span class="required">Yes</span></td>
+                <td>Research project title</td>
+                <td>Machine Learning for Healthcare</td>
+            </tr>
+            <tr>
+                <td><strong>Coordenador</strong></td>
+                <td><span class="required">Yes</span></td>
+                <td>Coordinator's full name</td>
+                <td>João Silva</td>
+            </tr>
+            <tr>
+                <td><strong>EmailCoordenador</strong></td>
+                <td><span class="required">Yes</span></td>
+                <td>Coordinator's email address</td>
+                <td>joao.silva@example.com</td>
+            </tr>
+            <tr>
+                <td><strong>Inicio</strong></td>
+                <td><span class="required">Yes</span></td>
+                <td>Start date (DD-MM-YY format)</td>
+                <td>01-08-22</td>
+            </tr>
+            <tr>
+                <td><strong>Fim</strong></td>
+                <td><span class="required">Yes</span></td>
+                <td>End date (DD-MM-YY format)</td>
+                <td>31-12-26</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>Optional Columns</h3>
+    <table class="csv-format-table">
+        <thead>
+            <tr>
+                <th>Column Name</th>
+                <th>Required</th>
+                <th>Description</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Pesquisadores</strong></td>
+                <td>No</td>
+                <td>Team members (semicolon-separated)</td>
+                <td>Maria Santos; Pedro Costa; Ana Lima</td>
+            </tr>
+            <tr>
+                <td><strong>Estudantes</strong></td>
+                <td>No</td>
+                <td>Students (semicolon-separated)</td>
+                <td>Carlos Souza; Julia Oliveira</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h3>Important Notes</h3>
+    <ul>
+        <li><strong>Date Format:</strong> All dates must be in DD-MM-YY format (e.g., 01-08-22 for August 1, 2022)</li>
+        <li><strong>List Format:</strong> Multiple names must be separated by semicolons (;)</li>
+        <li><strong>Duplicate Detection:</strong> Projects with the same title and coordinator will be skipped</li>
+        <li><strong>Person Deduplication:</strong> People are deduplicated by email (for coordinators) or name (for team members/students)</li>
+        <li><strong>Placeholder Emails:</strong> Team members and students without emails will get placeholder emails (e.g., firstname.lastname@noemail.local)</li>
+    </ul>
+    
+    <h3>Example CSV Content</h3>
+    <div class="example-box">
+Titulo,Coordenador,EmailCoordenador,Inicio,Fim,Pesquisadores,Estudantes
+Machine Learning for Healthcare,João Silva,joao.silva@example.com,01-08-22,31-12-26,Maria Santos; Pedro Costa,Carlos Souza; Julia Oliveira
+Data Science Research,Ana Lima,ana.lima@example.com,01-09-23,31-08-25,Roberto Alves,
+    </div>
+</div>
+
+{% endblock %}

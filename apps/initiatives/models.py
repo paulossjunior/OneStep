@@ -171,6 +171,12 @@ class Initiative(TimestampedModel):
         related_name='student_initiatives',
         help_text="Students participating in this initiative"
     )
+    knowledge_areas = models.ManyToManyField(
+        'organizational_group.KnowledgeArea',
+        blank=True,
+        related_name='initiatives',
+        help_text="Knowledge areas associated with this initiative"
+    )
     
     class Meta:
         ordering = ['name']

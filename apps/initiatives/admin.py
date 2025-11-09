@@ -1,10 +1,13 @@
 from django.contrib import admin
 from django.db import models
 from django.utils.html import format_html
-from django.urls import reverse
+from django.urls import reverse, path
 from django.utils.safestring import mark_safe
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from .models import Initiative, InitiativeType
 from apps.core.admin import admin_site
+from .csv_import.processor import ResearchProjectImportProcessor
 
 
 @admin.register(InitiativeType)
@@ -140,16 +143,16 @@ class ChildInitiativeInline(admin.TabularInline):
         return False
 
 
-class GroupInline(admin.TabularInline):
+class UnitInline(admin.TabularInline):
     """
-    Inline admin for group associations (many-to-many relationship).
+    Inline admin for organizational unit associations (many-to-many relationship).
     
-    Allows viewing and editing group associations directly from Initiative admin page.
+    Allows viewing and editing unit associations directly from Initiative admin page.
     """
-    model = Initiative.groups.through
+    model = Initiative.units.through
     extra = 1
-    verbose_name = "Group"
-    verbose_name_plural = "Groups"
+    verbose_name = "Organizational Unit"
+    verbose_name_plural = "Organizational Units"
     can_delete = True
     
     def get_queryset(self, request):
@@ -162,7 +165,7 @@ class GroupInline(admin.TabularInline):
         Returns:
             QuerySet: Optimized queryset
         """
-        return super().get_queryset(request).select_related('organizationalgroup')
+        return super().get_queryset(request).select_related('organizationalunit')
 
 
 @admin.register(Initiative)
@@ -179,12 +182,13 @@ class InitiativeAdmin(admin.ModelAdmin):
         'name_display',
         'type_display',
         'coordinator_display',
+        'knowledge_areas_display',
         'start_date_display',
         'end_date_display',
         'team_count_display',
         'student_count_display',
         'children_count_display',
-        'group_count_display',
+        'unit_count_display',
         'hierarchy_level_display',
         'status_display'
     ]
@@ -193,6 +197,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     
     list_filter = [
         'type',
+        'knowledge_areas',
         'start_date',
         'end_date',
         'coordinator',
@@ -215,7 +220,8 @@ class InitiativeAdmin(admin.ModelAdmin):
         'team_count_display',
         'student_count_display',
         'children_count_display',
-        'group_count_display',
+        'unit_count_display',
+        'knowledge_areas_count_display',
         'hierarchy_level_display',
         'coordinator_name',
         'status_display'
@@ -227,6 +233,10 @@ class InitiativeAdmin(admin.ModelAdmin):
             'fields': ('name', 'description', 'type'),
             'description': 'Basic information about the initiative.'
         }),
+        ('Knowledge Areas', {
+            'fields': ('knowledge_areas',),
+            'description': 'Knowledge areas associated with this initiative.'
+        }),
         ('Timeline', {
             'fields': ('start_date', 'end_date'),
             'description': 'Initiative timeline and duration.'
@@ -236,7 +246,7 @@ class InitiativeAdmin(admin.ModelAdmin):
             'description': 'Hierarchical and coordination relationships.'
         }),
         ('Statistics', {
-            'fields': ('team_count_display', 'student_count_display', 'children_count_display', 'group_count_display', 'hierarchy_level_display', 'status_display'),
+            'fields': ('team_count_display', 'student_count_display', 'children_count_display', 'unit_count_display', 'knowledge_areas_count_display', 'hierarchy_level_display', 'status_display'),
             'classes': ('collapse',),
             'description': 'Computed statistics and status information.'
         }),
@@ -248,7 +258,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     )
     
     # Inline configuration
-    inlines = [TeamMemberInline, StudentInline, ChildInitiativeInline, GroupInline]
+    inlines = [TeamMemberInline, StudentInline, ChildInitiativeInline, UnitInline]
     
     # Pagination and performance
     list_per_page = 25
@@ -262,6 +272,98 @@ class InitiativeAdmin(admin.ModelAdmin):
     
     # Autocomplete fields
     autocomplete_fields = ['coordinator', 'parent']
+    
+    # Filter horizontal for many-to-many fields
+    filter_horizontal = ['knowledge_areas', 'team_members', 'students']
+    
+    # Custom changelist template
+    change_list_template = 'admin/initiatives/initiative/change_list.html'
+    
+    def get_urls(self):
+        """
+        Add custom URL for CSV import.
+        
+        Returns:
+            list: URL patterns
+        """
+        urls = super().get_urls()
+        custom_urls = [
+            path('import-csv/', self.admin_site.admin_view(self.import_csv_view), name='initiatives_initiative_import_csv'),
+        ]
+        return custom_urls + urls
+    
+    def import_csv_view(self, request):
+        """
+        Handle CSV import view.
+        
+        Args:
+            request: HTTP request object
+            
+        Returns:
+            HttpResponse: Rendered template or redirect
+        """
+        if request.method == 'POST':
+            csv_file = request.FILES.get('csv_file')
+            
+            if not csv_file:
+                messages.error(request, 'Please select a CSV file to upload.')
+                return redirect('..')
+            
+            # Validate file extension
+            if not csv_file.name.endswith('.csv'):
+                messages.error(request, 'Please upload a CSV file (.csv extension).')
+                return redirect('..')
+            
+            # Process CSV
+            processor = ResearchProjectImportProcessor()
+            reporter = processor.process_csv(csv_file)
+            
+            # Display success messages
+            if reporter.success_count > 0:
+                messages.success(
+                    request,
+                    f'Successfully imported {reporter.success_count} research project(s).'
+                )
+            
+            # Display warning messages for skipped rows
+            if reporter.skip_count > 0:
+                messages.warning(
+                    request,
+                    f'Skipped {reporter.skip_count} duplicate project(s).'
+                )
+            
+            # Display error messages (limit to first 10)
+            if reporter.has_errors():
+                error_count = len(reporter.get_errors())
+                messages.error(
+                    request,
+                    f'Encountered {error_count} error(s) during import.'
+                )
+                
+                # Show first 10 errors
+                for error in reporter.get_errors()[:10]:
+                    messages.error(
+                        request,
+                        f"Row {error['row']}: {error['message']}"
+                    )
+                
+                if error_count > 10:
+                    messages.warning(
+                        request,
+                        f'... and {error_count - 10} more error(s). Check logs for details.'
+                    )
+            
+            return redirect('..')
+        
+        # GET request - show upload form
+        context = {
+            'site_title': 'Import Research Projects',
+            'title': 'Import Research Projects from CSV',
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        }
+        
+        return render(request, 'admin/initiatives/initiative/import_csv.html', context)
     
     def get_queryset(self, request):
         """
@@ -278,11 +380,14 @@ class InitiativeAdmin(admin.ModelAdmin):
         # Optimize with select_related and prefetch_related
         queryset = queryset.select_related(
             'coordinator',
-            'parent'
+            'parent',
+            'type'
         ).prefetch_related(
             'team_members',
             'students',
-            'children'
+            'children',
+            'knowledge_areas',
+            'units'
         )
         
         # Add annotations for counts to improve performance
@@ -290,7 +395,7 @@ class InitiativeAdmin(admin.ModelAdmin):
             annotated_team_count=models.Count('team_members', distinct=True),
             annotated_student_count=models.Count('students', distinct=True),
             annotated_children_count=models.Count('children', distinct=True),
-            annotated_group_count=models.Count('groups', distinct=True)
+            annotated_unit_count=models.Count('units', distinct=True)
         )
         
         return queryset
@@ -364,6 +469,58 @@ class InitiativeAdmin(admin.ModelAdmin):
         return format_html('<span style="color: #999;">No coordinator</span>')
     coordinator_display.short_description = 'Coordinator'
     coordinator_display.admin_order_field = 'coordinator__name'
+    
+    def knowledge_areas_display(self, obj):
+        """
+        Display knowledge areas as comma-separated list.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted knowledge areas
+        """
+        knowledge_areas = obj.knowledge_areas.all()
+        if knowledge_areas:
+            ka_names = [ka.name for ka in knowledge_areas]
+            if len(ka_names) > 2:
+                # Show first 2 and count
+                display = ', '.join(ka_names[:2])
+                remaining = len(ka_names) - 2
+                return format_html(
+                    '<span title="{}">{} <em>(+{} more)</em></span>',
+                    ', '.join(ka_names),
+                    display,
+                    remaining
+                )
+            else:
+                return ', '.join(ka_names)
+        return format_html('<span style="color: #999;">None</span>')
+    knowledge_areas_display.short_description = 'Knowledge Areas'
+    
+    def knowledge_areas_count_display(self, obj):
+        """
+        Display knowledge areas count.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted knowledge areas count
+        """
+        count = obj.knowledge_areas.count()
+        
+        if count > 0:
+            ka_names = [ka.name for ka in obj.knowledge_areas.all()]
+            return format_html(
+                '<span title="{}">{} area{}</span>',
+                ', '.join(ka_names),
+                count,
+                's' if count != 1 else ''
+            )
+        else:
+            return format_html('<span style="color: #999;">No areas</span>')
+    knowledge_areas_count_display.short_description = 'Knowledge Areas'
     
     def start_date_display(self, obj):
         """
@@ -466,28 +623,28 @@ class InitiativeAdmin(admin.ModelAdmin):
     children_count_display.short_description = 'Sub-Initiatives'
     children_count_display.admin_order_field = 'annotated_children_count'
     
-    def group_count_display(self, obj):
+    def unit_count_display(self, obj):
         """
-        Display associated groups count.
+        Display associated organizational units count.
         
         Args:
             obj (Initiative): Initiative instance
             
         Returns:
-            str: HTML formatted group count
+            str: HTML formatted unit count
         """
-        count = getattr(obj, 'annotated_group_count', 0)
+        count = getattr(obj, 'annotated_unit_count', 0)
         
         if count > 0:
             return format_html(
-                '<strong>{}</strong> group{}',
+                '<strong>{}</strong> unit{}',
                 count,
                 's' if count != 1 else ''
             )
         else:
-            return format_html('<span style="color: #999;">No groups</span>')
-    group_count_display.short_description = 'Groups'
-    group_count_display.admin_order_field = 'annotated_group_count'
+            return format_html('<span style="color: #999;">No units</span>')
+    unit_count_display.short_description = 'Units'
+    unit_count_display.admin_order_field = 'annotated_unit_count'
     
     def hierarchy_level_display(self, obj):
         """

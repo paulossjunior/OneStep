@@ -5,6 +5,125 @@ from apps.core.models import TimestampedModel
 from datetime import date
 
 
+class Organization(TimestampedModel):
+    """
+    Represents an organization that contains organizational units.
+    
+    Attributes:
+        name (CharField): Organization name
+        description (TextField): Organization description
+    """
+    
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text="Organization name"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Organization description"
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Organization'
+        verbose_name_plural = 'Organizations'
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the Organization.
+        
+        Returns:
+            str: Name of the organization
+        """
+        return self.name
+    
+    def clean(self):
+        """
+        Custom validation for the Organization model.
+        """
+        super().clean()
+        
+        if not self.name or not self.name.strip():
+            raise ValidationError({'name': 'Organization name cannot be empty.'})
+        
+        if self.name:
+            self.name = self.name.strip()
+    
+    def unit_count(self):
+        """
+        Returns count of organizational units in this organization.
+        
+        Returns:
+            int: Number of organizational units
+        """
+        return self.units.count()
+
+
+class OrganizationalType(TimestampedModel):
+    """
+    Represents the type of an organizational unit (e.g., Research, Extension).
+    
+    Attributes:
+        name (CharField): Type name
+        code (CharField): Type code
+        description (TextField): Type description
+    """
+    
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Type name (e.g., Research, Extension)"
+    )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Type code (e.g., research, extension)"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Type description"
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Organizational Type'
+        verbose_name_plural = 'Organizational Types'
+        indexes = [
+            models.Index(fields=['code']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the OrganizationalType.
+        
+        Returns:
+            str: Name of the type
+        """
+        return self.name
+    
+    def clean(self):
+        """
+        Custom validation for the OrganizationalType model.
+        """
+        super().clean()
+        
+        if not self.name or not self.name.strip():
+            raise ValidationError({'name': 'Type name cannot be empty.'})
+        
+        if not self.code or not self.code.strip():
+            raise ValidationError({'code': 'Type code cannot be empty.'})
+        
+        if self.name:
+            self.name = self.name.strip()
+        
+        if self.code:
+            self.code = self.code.strip().lower()
+
+
 class KnowledgeArea(TimestampedModel):
     """
     Represents an academic or research domain that categorizes organizational groups.
@@ -153,22 +272,22 @@ class Campus(TimestampedModel):
         return self.groups.count()
 
 
-class OrganizationalGroupLeadership(TimestampedModel):
+class OrganizationalUnitLeadership(TimestampedModel):
     """
     Through model tracking leadership relationships with history.
     
     Attributes:
-        group (ForeignKey): Reference to the OrganizationalGroup
+        unit (ForeignKey): Reference to the OrganizationalUnit
         person (ForeignKey): Reference to the Person who is a leader
         start_date (DateField): Date when leadership began
         end_date (DateField): Date when leadership ended (null if ongoing)
         is_active (BooleanField): Whether this is an active leadership
     """
     
-    group = models.ForeignKey(
-        'OrganizationalGroup',
+    unit = models.ForeignKey(
+        'OrganizationalUnit',
         on_delete=models.CASCADE,
-        help_text="Organizational group being led"
+        help_text="Organizational unit being led"
     )
     person = models.ForeignKey(
         'people.Person',
@@ -190,17 +309,17 @@ class OrganizationalGroupLeadership(TimestampedModel):
     
     class Meta:
         ordering = ['-start_date']
-        verbose_name = 'Organizational Group Leadership'
-        verbose_name_plural = 'Organizational Group Leaderships'
+        verbose_name = 'Organizational Unit Leadership'
+        verbose_name_plural = 'Organizational Unit Leaderships'
         indexes = [
-            models.Index(fields=['group', 'is_active']),
+            models.Index(fields=['unit', 'is_active']),
             models.Index(fields=['person']),
             models.Index(fields=['start_date']),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['group', 'person', 'start_date'],
-                name='unique_group_person_start_date'
+                fields=['unit', 'person', 'start_date'],
+                name='unique_unit_person_start_date'
             ),
             models.CheckConstraint(
                 check=models.Q(end_date__gte=models.F('start_date')) | models.Q(end_date__isnull=True),
@@ -210,17 +329,17 @@ class OrganizationalGroupLeadership(TimestampedModel):
     
     def __str__(self):
         """
-        String representation of the OrganizationalGroupLeadership.
+        String representation of the OrganizationalUnitLeadership.
         
         Returns:
             str: Description of the leadership relationship
         """
         status = "Active" if self.is_active else "Inactive"
-        return f"{self.person.name} - {self.group.name} ({status})"
+        return f"{self.person.name} - {self.unit.name} ({status})"
     
     def clean(self):
         """
-        Custom validation for the OrganizationalGroupLeadership model.
+        Custom validation for the OrganizationalUnitLeadership model.
         """
         super().clean()
         
@@ -238,138 +357,148 @@ class OrganizationalGroupLeadership(TimestampedModel):
             })
         
         # Check for duplicate active leaders
-        if self.is_active and self.group_id and self.person_id:
-            existing_active = OrganizationalGroupLeadership.objects.filter(
-                group=self.group,
+        if self.is_active and self.unit_id and self.person_id:
+            existing_active = OrganizationalUnitLeadership.objects.filter(
+                unit=self.unit,
                 person=self.person,
                 is_active=True
             ).exclude(pk=self.pk)
             
             if existing_active.exists():
                 raise ValidationError({
-                    'person': 'This person is already an active leader of this organizational group.'
+                    'person': 'This person is already an active leader of this organizational unit.'
                 })
 
 
-class OrganizationalGroup(TimestampedModel):
+class OrganizationalUnit(TimestampedModel):
     """
-    Represents a university research or organizational group.
+    Represents an organizational unit within an organization.
     
     Attributes:
-        name (CharField): Full organizational group name
-        short_name (CharField): Abbreviated organizational group name
-        url (URLField): Organizational group website URL (optional)
-        type (CharField): Organizational group type (Research or Extension)
-        knowledge_area (CharField): Field of study or research domain
+        name (CharField): Full organizational unit name
+        short_name (CharField): Abbreviated organizational unit name
+        url (URLField): Organizational unit website URL (optional)
+        type (ForeignKey): Organizational unit type (Research, Extension, etc.)
+        organization (ForeignKey): Parent organization
+        knowledge_area (ForeignKey): Primary knowledge area (deprecated - use knowledge_areas)
         campus (ForeignKey): University campus affiliation
-        leaders (ManyToManyField): People who lead the organizational group (through OrganizationalGroupLeadership)
-        members (ManyToManyField): People who are members of the organizational group
-        initiatives (ManyToManyField): Initiatives associated with the organizational group
+        leaders (ManyToManyField): People who lead the organizational unit (through OrganizationalUnitLeadership)
+        members (ManyToManyField): People who are members of the organizational unit
+        initiatives (ManyToManyField): Initiatives associated with the organizational unit
     """
-    
-    TYPE_RESEARCH = 'research'
-    TYPE_EXTENSION = 'extension'
-    TYPE_CHOICES = [
-        (TYPE_RESEARCH, 'Research'),
-        (TYPE_EXTENSION, 'Extension'),
-    ]
     
     name = models.CharField(
         max_length=200,
-        help_text="Full organizational group name"
+        help_text="Full organizational unit name"
     )
     short_name = models.CharField(
         max_length=50,
-        help_text="Abbreviated organizational group name"
+        help_text="Abbreviated organizational unit name"
     )
     url = models.URLField(
         blank=True,
-        help_text="Organizational group website URL (optional)"
+        help_text="Organizational unit website URL (optional)"
     )
-    type = models.CharField(
-        max_length=20,
-        choices=TYPE_CHOICES,
-        help_text="Organizational group type (Research or Extension)"
+    type = models.ForeignKey(
+        'OrganizationalType',
+        on_delete=models.PROTECT,
+        related_name='units',
+        help_text="Organizational unit type (Research, Extension, etc.)"
+    )
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.PROTECT,
+        related_name='units',
+        help_text="Parent organization"
     )
     knowledge_area = models.ForeignKey(
         'KnowledgeArea',
         on_delete=models.PROTECT,
-        related_name='groups',
-        help_text="Knowledge area foreign key"
+        related_name='units',
+        null=True,
+        blank=True,
+        help_text="Primary knowledge area (deprecated - use knowledge_areas)"
     )
     campus = models.ForeignKey(
         'Campus',
         on_delete=models.PROTECT,
-        related_name='groups',
+        related_name='units',
         help_text="University campus affiliation"
     )
     
     # Many-to-many relationships
+    knowledge_areas = models.ManyToManyField(
+        'KnowledgeArea',
+        related_name='related_units',
+        blank=True,
+        help_text="Knowledge areas associated with this unit (from related initiatives)"
+    )
     leaders = models.ManyToManyField(
         'people.Person',
-        through='OrganizationalGroupLeadership',
-        related_name='led_groups',
-        help_text="People who lead the organizational group"
+        through='OrganizationalUnitLeadership',
+        related_name='led_units',
+        help_text="People who lead the organizational unit"
     )
     members = models.ManyToManyField(
         'people.Person',
-        related_name='member_groups',
+        related_name='member_units',
         blank=True,
-        help_text="People who are members of the organizational group"
+        help_text="People who are members of the organizational unit"
     )
     initiatives = models.ManyToManyField(
         'initiatives.Initiative',
-        related_name='groups',
+        related_name='units',
         blank=True,
-        help_text="Initiatives associated with the organizational group"
+        help_text="Initiatives associated with the organizational unit"
     )
     
     class Meta:
         ordering = ['name']
-        verbose_name = 'Organizational Group'
-        verbose_name_plural = 'Organizational Groups'
+        verbose_name = 'Organizational Unit'
+        verbose_name_plural = 'Organizational Units'
         indexes = [
             models.Index(fields=['name']),
             models.Index(fields=['short_name']),
             models.Index(fields=['type']),
+            models.Index(fields=['organization']),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['short_name', 'campus'],
-                name='unique_short_name_campus_id'
+                fields=['short_name', 'organization'],
+                name='unique_short_name_organization'
             )
         ]
     
     def __str__(self):
         """
-        String representation of the OrganizationalGroup.
+        String representation of the OrganizationalUnit.
         
         Returns:
-            str: Name of the organizational group
+            str: Name of the organizational unit
         """
         return self.name
     
     def clean(self):
         """
-        Custom validation for the OrganizationalGroup model.
+        Custom validation for the OrganizationalUnit model.
         """
         super().clean()
         
         # Validate that name is not empty after stripping whitespace
         if not self.name or not self.name.strip():
-            raise ValidationError({'name': 'Organizational group name cannot be empty.'})
+            raise ValidationError({'name': 'Organizational unit name cannot be empty.'})
         
         # Validate that short_name is not empty after stripping whitespace
         if not self.short_name or not self.short_name.strip():
             raise ValidationError({'short_name': 'Short name cannot be empty.'})
         
         # Validate that type is provided
-        if not self.type:
-            raise ValidationError({'type': 'Organizational group type is required.'})
+        if not self.type_id:
+            raise ValidationError({'type': 'Organizational unit type is required.'})
         
-        # Validate that knowledge_area FK exists
-        if not self.knowledge_area_id:
-            raise ValidationError({'knowledge_area': 'Knowledge area is required.'})
+        # Validate that organization is provided
+        if not self.organization_id:
+            raise ValidationError({'organization': 'Organization is required.'})
         
         # Clean up whitespace
         if self.name:
@@ -386,16 +515,16 @@ class OrganizationalGroup(TimestampedModel):
             except ValidationError:
                 raise ValidationError({'url': 'Enter a valid URL.'})
         
-        # Validate unique constraint for short_name + campus
-        if self.short_name and self.campus_id:
-            existing_group = OrganizationalGroup.objects.filter(
+        # Validate unique constraint for short_name + organization
+        if self.short_name and self.organization_id:
+            existing_unit = OrganizationalUnit.objects.filter(
                 short_name__iexact=self.short_name,
-                campus_id=self.campus_id
+                organization_id=self.organization_id
             ).exclude(pk=self.pk)
             
-            if existing_group.exists():
+            if existing_unit.exists():
                 raise ValidationError({
-                    'short_name': f'An organizational group with short name "{self.short_name}" already exists on campus "{self.campus.name}".'
+                    'short_name': f'An organizational unit with short name "{self.short_name}" already exists in organization "{self.organization.name}".'
                 })
     
     def get_current_leaders(self):
@@ -403,11 +532,11 @@ class OrganizationalGroup(TimestampedModel):
         Returns QuerySet of current leaders (is_active=True).
         
         Returns:
-            QuerySet: Current leaders of the organizational group
+            QuerySet: Current leaders of the organizational unit
         """
         return self.leaders.filter(
-            organizationalgroupleadership__is_active=True,
-            organizationalgroupleadership__group=self
+            organizationalunitleadership__is_active=True,
+            organizationalunitleadership__unit=self
         ).distinct()
     
     def get_historical_leaders(self):
@@ -428,7 +557,7 @@ class OrganizationalGroup(TimestampedModel):
             start_date (date, optional): Leadership start date. Defaults to today.
             
         Returns:
-            OrganizationalGroupLeadership: The created leadership relationship
+            OrganizationalUnitLeadership: The created leadership relationship
             
         Raises:
             ValidationError: If the person is already an active leader
@@ -437,8 +566,8 @@ class OrganizationalGroup(TimestampedModel):
             start_date = date.today()
         
         # Check if person is already an active leader
-        existing_active = OrganizationalGroupLeadership.objects.filter(
-            group=self,
+        existing_active = OrganizationalUnitLeadership.objects.filter(
+            unit=self,
             person=person,
             is_active=True
         )
@@ -449,8 +578,8 @@ class OrganizationalGroup(TimestampedModel):
             )
         
         # Create the leadership relationship
-        leadership = OrganizationalGroupLeadership.objects.create(
-            group=self,
+        leadership = OrganizationalUnitLeadership.objects.create(
+            unit=self,
             person=person,
             start_date=start_date,
             is_active=True
@@ -474,12 +603,12 @@ class OrganizationalGroup(TimestampedModel):
         
         # Find the active leadership
         try:
-            leadership = OrganizationalGroupLeadership.objects.get(
-                group=self,
+            leadership = OrganizationalUnitLeadership.objects.get(
+                unit=self,
                 person=person,
                 is_active=True
             )
-        except OrganizationalGroupLeadership.DoesNotExist:
+        except OrganizationalUnitLeadership.DoesNotExist:
             raise ValidationError(
                 f'{person.name} is not an active leader of {self.name}.'
             )
@@ -515,3 +644,40 @@ class OrganizationalGroup(TimestampedModel):
             int: Number of associated initiatives
         """
         return self.initiatives.count()
+    
+    def sync_knowledge_areas_from_initiatives(self):
+        """
+        Synchronize knowledge areas from associated initiatives.
+        
+        This method collects all unique knowledge areas from initiatives
+        associated with this unit and updates the knowledge_areas field.
+        """
+        # Get all knowledge areas from associated initiatives
+        knowledge_area_ids = set()
+        for initiative in self.initiatives.all():
+            for ka in initiative.knowledge_areas.all():
+                knowledge_area_ids.add(ka.id)
+        
+        # Update the knowledge_areas field
+        self.knowledge_areas.set(knowledge_area_ids)
+    
+    def get_all_knowledge_areas(self):
+        """
+        Get all knowledge areas (both primary and from initiatives).
+        
+        Returns:
+            QuerySet: All knowledge areas associated with this unit
+        """
+        from apps.organizational_group.models import KnowledgeArea
+        
+        # Combine primary knowledge area with knowledge areas from initiatives
+        ka_ids = set(self.knowledge_areas.values_list('id', flat=True))
+        if self.knowledge_area_id:
+            ka_ids.add(self.knowledge_area_id)
+        
+        return KnowledgeArea.objects.filter(id__in=ka_ids)
+
+
+# Backward compatibility aliases
+OrganizationalGroup = OrganizationalUnit
+OrganizationalGroupLeadership = OrganizationalUnitLeadership
