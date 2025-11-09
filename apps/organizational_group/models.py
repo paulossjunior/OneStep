@@ -190,14 +190,14 @@ class KnowledgeArea(TimestampedModel):
     
     def group_count(self):
         """
-        Returns count of organizational groups in this knowledge area.
+        Returns count of organizational units in this knowledge area.
         
         Returns:
-            int: Number of organizational groups in this knowledge area
+            int: Number of organizational units in this knowledge area
         """
-        # Check if the reverse relationship exists (will be added in task 2)
-        if hasattr(self, 'groups'):
-            return self.groups.count()
+        # Check if the reverse relationship exists
+        if hasattr(self, 'units'):
+            return self.units.count()
         return 0
 
 
@@ -264,12 +264,12 @@ class Campus(TimestampedModel):
     
     def group_count(self):
         """
-        Returns count of organizational groups on this campus.
+        Returns count of organizational units on this campus.
         
         Returns:
-            int: Number of organizational groups on this campus
+            int: Number of organizational units on this campus
         """
-        return self.groups.count()
+        return self.units.count()
 
 
 class OrganizationalUnitLeadership(TimestampedModel):
@@ -403,12 +403,16 @@ class OrganizationalUnit(TimestampedModel):
         'OrganizationalType',
         on_delete=models.PROTECT,
         related_name='units',
+        null=True,
+        blank=True,
         help_text="Organizational unit type (Research, Extension, etc.)"
     )
     organization = models.ForeignKey(
         'Organization',
         on_delete=models.PROTECT,
         related_name='units',
+        null=True,
+        blank=True,
         help_text="Parent organization"
     )
     knowledge_area = models.ForeignKey(

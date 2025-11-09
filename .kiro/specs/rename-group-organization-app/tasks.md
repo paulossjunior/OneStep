@@ -109,7 +109,7 @@
     - Verify app loads correctly with new name
     - _Requirements: 1.3_
 
-- [-] 8. Update all import statements throughout codebase
+- [x] 8. Update all import statements throughout codebase
   - [x] 8.1 Update imports in initiatives app
     - Check apps/initiatives/models.py for any references to group models
     - Update any ForeignKey or ManyToManyField references
@@ -150,7 +150,7 @@
     - Verify all tests pass
     - _Requirements: 8.5_
 
-- [ ] 10. Create and apply database migrations
+- [x] 10. Create and apply database migrations
   - [x] 10.1 Create migration for model renaming
     - Run python manage.py makemigrations organizational_group
     - Verify migration includes RenameModel operations
@@ -164,7 +164,7 @@
     - Verify index names are updated
     - _Requirements: 9.3, 9.4_
   
-  - [ ] 10.3 Test migration on development database
+  - [x] 10.3 Test migration on development database
     - Apply migration with python manage.py migrate
     - Verify no errors during migration
     - Check that data is preserved

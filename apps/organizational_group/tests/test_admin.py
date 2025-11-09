@@ -507,7 +507,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_list_view_renders(self):
         """Test that admin list view renders successfully."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
@@ -516,7 +516,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_list_view_displays_correct_columns(self):
         """Test that list view displays all required columns including initiative_count."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url)
         
         # Check for column headers
@@ -540,7 +540,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_search_by_name(self):
         """Test admin search functionality by name."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url, {'q': 'Computer Science'})
         
         self.assertEqual(response.status_code, 200)
@@ -549,7 +549,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_search_by_short_name(self):
         """Test admin search functionality by short name."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url, {'q': 'CSRG'})
         
         self.assertEqual(response.status_code, 200)
@@ -558,7 +558,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_search_by_knowledge_area(self):
         """Test admin search functionality by knowledge area."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url, {'q': 'Agriculture'})
         
         self.assertEqual(response.status_code, 200)
@@ -567,7 +567,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_filter_by_type(self):
         """Test admin filtering by type."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url, {'type': OrganizationalGroup.TYPE_RESEARCH})
         
         self.assertEqual(response.status_code, 200)
@@ -576,7 +576,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_filter_by_campus(self):
         """Test admin filtering by campus."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url, {'campus': 'Main Campus'})
         
         self.assertEqual(response.status_code, 200)
@@ -584,7 +584,7 @@ class OrganizationalGroupAdminListViewTest(TestCase):
     
     def test_admin_filter_by_knowledge_area(self):
         """Test admin filtering by knowledge area."""
-        url = reverse('admin:organizational_group_organizationalgroup_changelist')
+        url = reverse('admin:organizational_group_organizationalunit_changelist')
         response = self.client.get(url, {'knowledge_area': 'Computer Science'})
         
         self.assertEqual(response.status_code, 200)

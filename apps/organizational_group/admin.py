@@ -6,8 +6,124 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from django.urls import path
-from .models import OrganizationalGroup, OrganizationalGroupLeadership, Campus, KnowledgeArea
+from .models import (
+    OrganizationalUnit as OrganizationalGroup,
+    OrganizationalUnitLeadership as OrganizationalGroupLeadership,
+    Campus,
+    KnowledgeArea,
+    Organization,
+    OrganizationalType
+)
 from .csv_import import ImportProcessor
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    """
+    Django Admin configuration for Organization model.
+    """
+    
+    list_display = [
+        'name',
+        'description_preview',
+        'unit_count_display',
+        'created_at'
+    ]
+    
+    list_display_links = ['name']
+    
+    search_fields = ['name', 'description']
+    
+    list_filter = ['created_at', 'updated_at']
+    
+    readonly_fields = ['id', 'created_at', 'updated_at', 'unit_count_display']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'description')
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def description_preview(self, obj):
+        """Display truncated description."""
+        if obj.description:
+            max_length = 60
+            if len(obj.description) > max_length:
+                return obj.description[:max_length] + '...'
+            return obj.description
+        return format_html('<span style="color: #999;">No description</span>')
+    description_preview.short_description = 'Description'
+    
+    def unit_count_display(self, obj):
+        """Display count of organizational units."""
+        count = obj.unit_count()
+        if count > 0:
+            return format_html(
+                '<strong>{}</strong> unit{}',
+                count,
+                's' if count != 1 else ''
+            )
+        return format_html('<span style="color: #999;">No units</span>')
+    unit_count_display.short_description = 'Units'
+
+
+@admin.register(OrganizationalType)
+class OrganizationalTypeAdmin(admin.ModelAdmin):
+    """
+    Django Admin configuration for OrganizationalType model.
+    """
+    
+    list_display = [
+        'name',
+        'code',
+        'description_preview',
+        'unit_count_display',
+        'created_at'
+    ]
+    
+    list_display_links = ['name']
+    
+    search_fields = ['name', 'code', 'description']
+    
+    list_filter = ['created_at', 'updated_at']
+    
+    readonly_fields = ['id', 'created_at', 'updated_at', 'unit_count_display']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'code', 'description')
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def description_preview(self, obj):
+        """Display truncated description."""
+        if obj.description:
+            max_length = 60
+            if len(obj.description) > max_length:
+                return obj.description[:max_length] + '...'
+            return obj.description
+        return format_html('<span style="color: #999;">No description</span>')
+    description_preview.short_description = 'Description'
+    
+    def unit_count_display(self, obj):
+        """Display count of organizational units of this type."""
+        count = obj.units.count()
+        if count > 0:
+            return format_html(
+                '<strong>{}</strong> unit{}',
+                count,
+                's' if count != 1 else ''
+            )
+        return format_html('<span style="color: #999;">No units</span>')
+    unit_count_display.short_description = 'Units'
 
 
 @admin.register(KnowledgeArea)
@@ -86,7 +202,7 @@ class KnowledgeAreaAdmin(admin.ModelAdmin):
         
         # Add annotation for group count to improve performance
         queryset = queryset.annotate(
-            annotated_group_count=models.Count('groups', distinct=True)
+            annotated_group_count=models.Count('units', distinct=True)
         )
         
         return queryset
@@ -247,14 +363,14 @@ class CampusAdmin(admin.ModelAdmin):
         
         # Add annotation for group count to improve performance
         queryset = queryset.annotate(
-            annotated_group_count=models.Count('groups', distinct=True)
+            annotated_group_count=models.Count('units', distinct=True)
         )
         
         return queryset
     
     def group_count_display(self, obj):
         """
-        Display count of organizational groups on this campus with HTML formatting.
+        Display count of organizational units on this campus with HTML formatting.
         
         Args:
             obj (Campus): Campus instance
@@ -513,8 +629,8 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
             annotated_member_count=models.Count('members', distinct=True),
             annotated_initiative_count=models.Count('initiatives', distinct=True),
             annotated_leader_count=models.Count(
-                'organizationalgroupleadership',
-                filter=models.Q(organizationalgroupleadership__is_active=True),
+                'organizationalunitleadership',
+                filter=models.Q(organizationalunitleadership__is_active=True),
                 distinct=True
             )
         )
@@ -532,16 +648,19 @@ class OrganizationalGroupAdmin(admin.ModelAdmin):
         Returns:
             str: HTML formatted type with color
         """
+        if not obj.type:
+            return '-'
+        
         colors = {
             'research': '#2196F3',  # Blue
             'extension': '#4CAF50'  # Green
         }
-        color = colors.get(obj.type, '#666')
+        color = colors.get(obj.type.code if obj.type else None, '#666')
         
         return format_html(
             '<span style="color: {}; font-weight: bold;">{}</span>',
             color,
-            obj.get_type_display()
+            obj.type.name
         )
     type_display.short_description = 'Type'
     type_display.admin_order_field = 'type'

@@ -234,7 +234,7 @@ class OrganizationalGroupViewSet(viewsets.ModelViewSet):
             'members',
             'initiatives',
             Prefetch(
-                'organizationalgroupleadership_set',
+                'organizationalunitleadership_set',
                 queryset=OrganizationalGroupLeadership.objects.filter(is_active=True).select_related('person'),
                 to_attr='current_leaders_list'
             )
@@ -242,7 +242,7 @@ class OrganizationalGroupViewSet(viewsets.ModelViewSet):
         
         # Add annotations for counts to improve performance
         queryset = queryset.annotate(
-            annotated_leader_count=Count('leaders', distinct=True, filter=models.Q(organizationalgroupleadership__is_active=True)),
+            annotated_leader_count=Count('leaders', distinct=True, filter=models.Q(organizationalunitleadership__is_active=True)),
             annotated_member_count=Count('members', distinct=True),
             annotated_initiative_count=Count('initiatives', distinct=True)
         )

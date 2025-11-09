@@ -220,7 +220,7 @@ main_campus_groups = OrganizationalGroup.objects.filter(campus=main_campus)
 
 # Get groups with current leaders (optimized)
 groups_with_leaders = OrganizationalGroup.objects.filter(
-    organizationalgroupleadership__is_active=True
+    organizationalunitleadership__is_active=True
 ).select_related('campus').distinct()
 
 # Get group with prefetched data
@@ -229,7 +229,7 @@ group = OrganizationalGroup.objects.select_related(
 ).prefetch_related(
     'members',
     'initiatives',
-    'organizationalgroupleadership_set__person'
+    'organizationalunitleadership_set__person'
 ).get(id=1)
 
 # Access nested campus data
@@ -404,7 +404,7 @@ groups = OrganizationalGroup.objects.select_related(
 groups = OrganizationalGroup.objects.select_related(
     'campus'
 ).prefetch_related(
-    'organizationalgroupleadership_set__person',
+    'organizationalunitleadership_set__person',
     'members',
     'initiatives'
 ).filter(campus__code='MAIN')
