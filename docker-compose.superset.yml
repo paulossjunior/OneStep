@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service (shared with Django)
+  db:
+    image: postgres:15-alpine
+    container_name: onestep_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-onestep_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+    shm_size: 128mb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    networks:
+      - onestep_network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Django Web Application Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: onestep_web
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-not-for-production}
+      - DEBUG=${DEBUG:-1}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - DB_ENGINE=django.db.backends.postgresql
+      - POSTGRES_DB=${POSTGRES_DB:-onestep_dev}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - ADMIN_SITE_HEADER=${ADMIN_SITE_HEADER:-OneStep Administration (Development)}
+      - STATIC_ROOT=${STATIC_ROOT:-/app/staticfiles}
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - /app/venv
+    ports:
+      - "8000:8000"
+    networks:
+      - onestep_network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Redis for Superset caching and async queries
+  redis:
+    image: redis:7-alpine
+    container_name: superset_redis
+    networks:
+      - onestep_network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Apache Superset
+  superset:
+    build:
+      context: ./docker/superset
+      dockerfile: Dockerfile
+    container_name: superset
+    environment:
+      # Superset configuration
+      - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY:-your-superset-secret-key-change-in-production}
+      - SUPERSET_LOAD_EXAMPLES=no
+      # Database connection for Superset metadata
+      - DATABASE_DB=superset
+      - DATABASE_HOST=db
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - DATABASE_USER=${POSTGRES_USER:-postgres}
+      - DATABASE_PORT=5432
+      - DATABASE_DIALECT=postgresql
+      # Redis configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Admin user configuration
+      - SUPERSET_ADMIN_USERNAME=${SUPERSET_ADMIN_USERNAME:-admin}
+      - SUPERSET_ADMIN_PASSWORD=${SUPERSET_ADMIN_PASSWORD:-admin}
+      - SUPERSET_ADMIN_EMAIL=${SUPERSET_ADMIN_EMAIL:-admin@superset.com}
+      - SUPERSET_ADMIN_FIRSTNAME=${SUPERSET_ADMIN_FIRSTNAME:-Admin}
+      - SUPERSET_ADMIN_LASTNAME=${SUPERSET_ADMIN_LASTNAME:-User}
+    ports:
+      - "8088:8088"
+    networks:
+      - onestep_network
+    volumes:
+      - superset_home:/app/superset_home
+      - ./docker/superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+      - ./docker/superset/init-superset.sh:/app/docker/init-superset.sh:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    command: >
+      bash -c "
+      /app/docker/init-superset.sh &&
+      gunicorn --bind 0.0.0.0:8088 --workers 4 --timeout 120 --limit-request-line 0 --limit-request-field_size 0 'superset.app:create_app()'
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local
+  redis_data:
+    driver: local
+  superset_home:
+    driver: local
+
+networks:
+  onestep_network:
+    driver: bridge

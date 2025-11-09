@@ -89,6 +89,42 @@ If you prefer to run the application without Docker:
    python manage.py runserver
    ```
 
+## Data Visualization with Apache Superset
+
+OneStep includes an integrated Apache Superset installation for powerful data visualization and business intelligence.
+
+### Quick Start with Superset
+
+```bash
+# Start all services including Superset
+make superset-up
+
+# Access Superset at http://localhost:8088
+# Default credentials: admin / admin
+```
+
+**Features:**
+- Interactive dashboards and charts
+- SQL-based data exploration
+- 50+ visualization types
+- Real-time data analysis
+- Export and sharing capabilities
+
+**Documentation:**
+- [Quick Start Guide](SUPERSET_README.md)
+- [Complete Setup Guide](docs/SUPERSET_SETUP.md)
+- [Quick Reference](docs/SUPERSET_QUICK_REFERENCE.md)
+
+### Superset Commands
+
+| Command | Description |
+|---------|-------------|
+| `make superset-up` | Start all services with Superset |
+| `make superset-down` | Stop Superset services |
+| `make superset-logs` | View Superset logs |
+| `make superset-shell` | Open Superset container shell |
+| `make superset-reset` | Reset admin password |
+
 ## Docker Commands Reference
 
 All Docker operations can be performed using the Makefile commands:

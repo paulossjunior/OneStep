@@ -33,6 +33,13 @@ help:
 	@echo "  make prod-backup     - Backup production database"
 	@echo "  make prod-restore    - Restore production database"
 	@echo ""
+	@echo "Superset Commands:"
+	@echo "  make superset-up     - Start all services with Superset"
+	@echo "  make superset-down   - Stop Superset services"
+	@echo "  make superset-logs   - View Superset logs"
+	@echo "  make superset-shell  - Open Superset container shell"
+	@echo "  make superset-reset  - Reset Superset admin password"
+	@echo ""
 	@echo "Utility Commands:"
 	@echo "  make clean           - Stop services and remove volumes"
 	@echo "  make prune           - Remove all unused Docker resources"
@@ -212,3 +219,66 @@ prod-restore:
 	else \
 		echo "Restore cancelled."; \
 	fi
+
+
+# Superset Commands
+
+# Start all services with Superset
+superset-up:
+	@echo "Starting all services with Superset..."
+	@if [ ! -f .env.superset ]; then \
+		echo "WARNING: .env.superset file not found, using defaults"; \
+	fi
+	docker-compose -f docker-compose.superset.yml --env-file .env.superset up -d
+	@echo "Services started successfully!"
+	@echo "Django application: http://localhost:8000"
+	@echo "Django admin: http://localhost:8000/admin/"
+	@echo "Superset: http://localhost:8088"
+	@echo ""
+	@echo "Waiting for Superset to initialize (this may take 2-3 minutes)..."
+	@echo "Check logs with: make superset-logs"
+
+# Stop Superset services
+superset-down:
+	@echo "Stopping Superset services..."
+	docker-compose -f docker-compose.superset.yml down
+	@echo "Services stopped successfully!"
+
+# Stop Superset and remove all volumes (WARNING: deletes all data)
+superset-clean:
+	@echo "WARNING: This will stop services and DELETE ALL DATA (databases, caches, etc.)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker-compose -f docker-compose.superset.yml down -v; \
+		echo "Services stopped and volumes removed!"; \
+	else \
+		echo "Operation cancelled."; \
+	fi
+
+# View Superset logs
+superset-logs:
+	@echo "Viewing Superset logs (Ctrl+C to exit)..."
+	docker-compose -f docker-compose.superset.yml logs -f superset
+
+# Open Superset container shell
+superset-shell:
+	@echo "Opening Superset container shell..."
+	docker-compose -f docker-compose.superset.yml exec superset /bin/bash
+
+# Reset Superset admin password
+superset-reset:
+	@echo "Resetting Superset admin password..."
+	docker-compose -f docker-compose.superset.yml exec superset superset fab reset-password --username admin
+	@echo "Password reset completed!"
+
+# Rebuild Superset
+superset-rebuild:
+	@echo "Rebuilding Superset container..."
+	docker-compose -f docker-compose.superset.yml up -d --build superset
+	@echo "Superset rebuilt successfully!"
+
+# View all Superset service logs
+superset-logs-all:
+	@echo "Viewing all Superset-related logs (Ctrl+C to exit)..."
+	docker-compose -f docker-compose.superset.yml logs -f
