@@ -8,14 +8,101 @@ from django.core.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from apps.core.pagination import StandardResultsSetPagination
-from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership
+from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership, KnowledgeArea
 from .serializers import (
+    KnowledgeAreaSerializer,
     CampusSerializer,
     OrganizationalGroupSerializer,
     OrganizationalGroupDetailSerializer,
     OrganizationalGroupCreateUpdateSerializer,
     OrganizationalGroupLeadershipSerializer
 )
+
+
+class KnowledgeAreaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing KnowledgeArea entities through REST API.
+    
+    Provides CRUD operations for KnowledgeArea management with proper
+    authentication, filtering, searching, and pagination.
+    
+    Endpoints:
+        GET /api/knowledge-areas/ - List all knowledge areas with pagination and filtering
+        POST /api/knowledge-areas/ - Create new knowledge area
+        GET /api/knowledge-areas/{id}/ - Retrieve knowledge area details
+        PUT /api/knowledge-areas/{id}/ - Update knowledge area (full update)
+        PATCH /api/knowledge-areas/{id}/ - Partial update knowledge area
+        DELETE /api/knowledge-areas/{id}/ - Delete knowledge area
+    """
+    
+    queryset = KnowledgeArea.objects.all()
+    serializer_class = KnowledgeAreaSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['name']
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at', 'updated_at']
+    ordering = ['name']
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        """
+        Get optimized queryset with group count annotation.
+        
+        Annotates each knowledge area with the count of associated organizational groups
+        for improved performance when displaying group counts.
+        
+        Returns:
+            QuerySet: Optimized KnowledgeArea queryset with annotations
+        """
+        queryset = KnowledgeArea.objects.annotate(
+            annotated_group_count=Count('groups', distinct=True)
+        )
+        return queryset
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete knowledge area with proper error handling.
+        
+        Prevents deletion of knowledge areas that have associated organizational groups
+        due to the PROTECT constraint on the foreign key relationship.
+        
+        Args:
+            request: HTTP request object
+            
+        Returns:
+            Response: Success response or error details
+        """
+        try:
+            instance = self.get_object()
+            
+            # Check if knowledge area has associated groups
+            group_count = instance.groups.count()
+            if group_count > 0:
+                return Response(
+                    {
+                        'error': {
+                            'code': 'KNOWLEDGE_AREA_HAS_GROUPS',
+                            'message': f'Cannot delete knowledge area with {group_count} associated group(s)',
+                            'details': 'Remove all organizational groups from this knowledge area before deletion or assign them to a different knowledge area.'
+                        }
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response(
+                {
+                    'error': {
+                        'code': 'DELETION_FAILED',
+                        'message': 'Failed to delete knowledge area',
+                        'details': str(e)
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class CampusViewSet(viewsets.ModelViewSet):
@@ -126,8 +213,8 @@ class OrganizationalGroupViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['type', 'campus_id', 'knowledge_area']
-    search_fields = ['name', 'short_name']
+    filterset_fields = ['type', 'campus_id', 'knowledge_area_id']
+    search_fields = ['name', 'short_name', 'knowledge_area__name']
     ordering_fields = ['name', 'short_name', 'type', 'campus', 'created_at', 'updated_at']
     ordering = ['name']
     pagination_class = StandardResultsSetPagination
@@ -143,7 +230,7 @@ class OrganizationalGroupViewSet(viewsets.ModelViewSet):
         Returns:
             QuerySet: Optimized OrganizationalGroup queryset
         """
-        queryset = OrganizationalGroup.objects.select_related('campus').prefetch_related(
+        queryset = OrganizationalGroup.objects.select_related('campus', 'knowledge_area').prefetch_related(
             'members',
             'initiatives',
             Prefetch(

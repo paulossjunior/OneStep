@@ -22,6 +22,9 @@ class PersonSerializer(serializers.ModelSerializer):
     team_count = serializers.SerializerMethodField(
         help_text="Number of initiatives this person is a team member of"
     )
+    student_count = serializers.SerializerMethodField(
+        help_text="Number of initiatives this person is a student in"
+    )
     
     class Meta:
         model = Person
@@ -32,6 +35,7 @@ class PersonSerializer(serializers.ModelSerializer):
             'full_name',
             'coordinated_count',
             'team_count',
+            'student_count',
             'created_at',
             'updated_at'
         ]
@@ -63,6 +67,20 @@ class PersonSerializer(serializers.ModelSerializer):
         """
         if hasattr(obj, 'team_initiatives'):
             return obj.team_initiatives.count()
+        return 0
+    
+    def get_student_count(self, obj):
+        """
+        Get the count of initiatives this person is a student in.
+        
+        Args:
+            obj (Person): Person instance
+            
+        Returns:
+            int: Number of student participations
+        """
+        if hasattr(obj, 'student_initiatives'):
+            return obj.student_initiatives.count()
         return 0
     
     def validate_email(self, value):
@@ -159,11 +177,15 @@ class PersonDetailSerializer(PersonSerializer):
     team_initiatives = serializers.SerializerMethodField(
         help_text="List of initiatives this person is a team member of (limited to 10 most recent)"
     )
+    student_initiatives = serializers.SerializerMethodField(
+        help_text="List of initiatives this person is a student in (limited to 10 most recent)"
+    )
     
     class Meta(PersonSerializer.Meta):
         fields = PersonSerializer.Meta.fields + [
             'coordinated_initiatives',
-            'team_initiatives'
+            'team_initiatives',
+            'student_initiatives'
         ]
     
     def get_coordinated_initiatives(self, obj):
@@ -207,5 +229,27 @@ class PersonDetailSerializer(PersonSerializer):
                     'type_name': initiative.type.name if hasattr(initiative, 'type') and initiative.type else None
                 }
                 for initiative in obj.team_initiatives.all()[:10]  # Limit to 10 for performance
+            ]
+        return []
+    
+    def get_student_initiatives(self, obj):
+        """
+        Get basic information about student initiatives.
+        
+        Args:
+            obj (Person): Person instance
+            
+        Returns:
+            list: List of student initiative basic info
+        """
+        if hasattr(obj, 'student_initiatives'):
+            return [
+                {
+                    'id': initiative.id,
+                    'name': initiative.name,
+                    'type': initiative.type.code if hasattr(initiative, 'type') and initiative.type else None,
+                    'type_name': initiative.type.name if hasattr(initiative, 'type') and initiative.type else None
+                }
+                for initiative in obj.student_initiatives.all()[:10]  # Limit to 10 for performance
             ]
         return []

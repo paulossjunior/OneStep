@@ -1,10 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import GroupViewSet, CampusViewSet
+from .views import KnowledgeAreaViewSet, OrganizationalGroupViewSet, CampusViewSet
 
-# Configure router with Group and Campus ViewSets
+# Configure router with KnowledgeArea, OrganizationalGroup and Campus ViewSets
 router = DefaultRouter()
-router.register(r'organizationalgroups', GroupViewSet, basename='organizationalgroups')
+router.register(r'knowledge-areas', KnowledgeAreaViewSet, basename='knowledge-area')
+router.register(r'organizationalgroups', OrganizationalGroupViewSet, basename='organizationalgroups')
 router.register(r'campuses', CampusViewSet, basename='campus')
 
 urlpatterns = [

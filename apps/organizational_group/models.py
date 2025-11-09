@@ -5,6 +5,83 @@ from apps.core.models import TimestampedModel
 from datetime import date
 
 
+class KnowledgeArea(TimestampedModel):
+    """
+    Represents an academic or research domain that categorizes organizational groups.
+    
+    Attributes:
+        name (CharField): Unique knowledge area name
+        description (TextField): Optional detailed description
+    """
+    
+    name = models.CharField(
+        max_length=200,
+        help_text="Knowledge area name"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed description of the knowledge area"
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Knowledge Area'
+        verbose_name_plural = 'Knowledge Areas'
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the KnowledgeArea.
+        
+        Returns:
+            str: Name of the knowledge area
+        """
+        return self.name
+    
+    def clean(self):
+        """
+        Custom validation for the KnowledgeArea model.
+        
+        Validates:
+            - Name is not empty after stripping whitespace
+            - Case-insensitive uniqueness of name
+        """
+        super().clean()
+        
+        # Validate that name is not empty after stripping whitespace
+        if not self.name or not self.name.strip():
+            raise ValidationError({'name': 'Knowledge area name cannot be empty.'})
+        
+        # Clean up whitespace
+        if self.name:
+            self.name = self.name.strip()
+        
+        # Validate case-insensitive uniqueness
+        if self.name:
+            existing = KnowledgeArea.objects.filter(
+                name__iexact=self.name
+            ).exclude(pk=self.pk)
+            
+            if existing.exists():
+                raise ValidationError({
+                    'name': f'Knowledge area with name "{self.name}" already exists (case-insensitive).'
+                })
+    
+    def group_count(self):
+        """
+        Returns count of organizational groups in this knowledge area.
+        
+        Returns:
+            int: Number of organizational groups in this knowledge area
+        """
+        # Check if the reverse relationship exists (will be added in task 2)
+        if hasattr(self, 'groups'):
+            return self.groups.count()
+        return 0
+
+
 class Campus(TimestampedModel):
     """
     Represents a university campus location.
@@ -214,9 +291,11 @@ class OrganizationalGroup(TimestampedModel):
         choices=TYPE_CHOICES,
         help_text="Organizational group type (Research or Extension)"
     )
-    knowledge_area = models.CharField(
-        max_length=200,
-        help_text="Field of study or research domain"
+    knowledge_area = models.ForeignKey(
+        'KnowledgeArea',
+        on_delete=models.PROTECT,
+        related_name='groups',
+        help_text="Knowledge area foreign key"
     )
     campus = models.ForeignKey(
         'Campus',
@@ -253,7 +332,6 @@ class OrganizationalGroup(TimestampedModel):
             models.Index(fields=['name']),
             models.Index(fields=['short_name']),
             models.Index(fields=['type']),
-            models.Index(fields=['knowledge_area']),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -288,6 +366,10 @@ class OrganizationalGroup(TimestampedModel):
         # Validate that type is provided
         if not self.type:
             raise ValidationError({'type': 'Organizational group type is required.'})
+        
+        # Validate that knowledge_area FK exists
+        if not self.knowledge_area_id:
+            raise ValidationError({'knowledge_area': 'Knowledge area is required.'})
         
         # Clean up whitespace
         if self.name:

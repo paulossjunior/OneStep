@@ -1,0 +1,98 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div id="content-main">
+    <h1>{{ title }}</h1>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div>
+                <label for="csv_file" class="required">CSV File:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+                <p class="help">Select a CSV file to import research groups.</p>
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="Import" class="default" name="_import">
+            <a href="{% url 'admin:organizational_group_organizationalgroup_changelist' %}" class="button cancel-link">Cancel</a>
+        </div>
+    </form>
+    
+    <div class="module" style="margin-top: 20px;">
+        <h2>CSV Format Requirements</h2>
+        <p>The CSV file must include the following columns (header row required):</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr style="background-color: #f8f8f8;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Column Name</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Required</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Description</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Sigla</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Group abbreviation/short name. If empty, defaults to "non-informed".</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">GPAI</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Nome</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Full group name (will be auto-formatted to Title Case)</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">GRUPO DE PESQUISA EM IA → Grupo De Pesquisa Em Ia</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>repositorio</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Repository or website URL. URLs without protocol will be prefixed with https://</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">dgp.cnpq.br/dgp/espelhogrupo/292264 or https://github.com/group</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Site</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Additional website URL (not imported, for reference only)</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">https://example.com</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>AreaConhecimento</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Knowledge area or research domain</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Computer Science</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Unidade</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Campus name</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Campus Central</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Lideres</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Leaders in format "Name (email), Name (email)"</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">John Doe (john@example.com), Jane Smith (jane@example.com)</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h3 style="margin-top: 20px;">Important Notes:</h3>
+        <ul>
+            <li>The CSV file must be UTF-8 encoded</li>
+            <li>The first row must contain the column headers exactly as shown above</li>
+            <li><strong>Text Normalization:</strong> All text fields (group names, campus names, knowledge areas, person names) will be automatically formatted with proper capitalization (first letter uppercase, rest lowercase for each word)</li>
+            <li>If <strong>Sigla</strong> (short name) is empty, it will default to "non-informed"</li>
+            <li>URLs without protocol (http:// or https://) will automatically be prefixed with https://</li>
+            <li>Duplicate groups (same short name + campus) will be skipped</li>
+            <li>Campus and Knowledge Area records will be created automatically if they don't exist</li>
+            <li>Person records will be created or updated based on email addresses</li>
+            <li>Invalid rows will be skipped and reported in the results</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

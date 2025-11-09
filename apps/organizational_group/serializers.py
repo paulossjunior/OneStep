@@ -1,8 +1,102 @@
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership
+from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership, KnowledgeArea
 from apps.people.serializers import PersonSerializer
 from apps.initiatives.serializers import InitiativeSerializer
+
+
+class KnowledgeAreaSerializer(serializers.ModelSerializer):
+    """
+    Serializer for KnowledgeArea model.
+    
+    Provides serialization for KnowledgeArea CRUD operations with proper validation
+    and additional computed fields for API responses.
+    """
+    
+    group_count = serializers.SerializerMethodField(
+        help_text="Number of organizational groups in this knowledge area"
+    )
+    
+    class Meta:
+        model = KnowledgeArea
+        fields = [
+            'id',
+            'name',
+            'description',
+            'group_count',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id',
+            'created_at',
+            'updated_at',
+            'group_count'
+        ]
+    
+    def get_group_count(self, obj):
+        """
+        Get the count of organizational groups in this knowledge area.
+        
+        Args:
+            obj (KnowledgeArea): KnowledgeArea instance
+            
+        Returns:
+            int: Number of organizational groups in this knowledge area
+        """
+        # Use annotated count if available, otherwise call method
+        if hasattr(obj, 'annotated_group_count'):
+            return obj.annotated_group_count
+        return obj.group_count()
+    
+    def validate_name(self, value):
+        """
+        Validate name field.
+        
+        Args:
+            value (str): Name value to validate
+            
+        Returns:
+            str: Validated and cleaned name
+            
+        Raises:
+            serializers.ValidationError: If name is empty after stripping
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Knowledge area name cannot be empty.")
+        return value.strip()
+    
+    def validate(self, data):
+        """
+        Object-level validation.
+        
+        Args:
+            data (dict): Validated data dictionary
+            
+        Returns:
+            dict: Validated data
+            
+        Raises:
+            serializers.ValidationError: If validation fails
+        """
+        # Create a temporary instance for model validation
+        instance = self.instance or KnowledgeArea()
+        
+        # Update instance with validated data
+        for attr, value in data.items():
+            setattr(instance, attr, value)
+        
+        try:
+            # Run model's clean method for additional validation
+            instance.clean()
+        except DjangoValidationError as e:
+            # Convert Django validation errors to DRF validation errors
+            if hasattr(e, 'error_dict'):
+                raise serializers.ValidationError(e.error_dict)
+            else:
+                raise serializers.ValidationError(e.messages)
+        
+        return data
 
 
 class CampusSerializer(serializers.ModelSerializer):
@@ -230,6 +324,12 @@ class OrganizationalGroupSerializer(serializers.ModelSerializer):
         help_text="Campus information with complete details"
     )
     
+    # Nested knowledge area data for read operations
+    knowledge_area = KnowledgeAreaSerializer(
+        read_only=True,
+        help_text="Knowledge area information with complete details"
+    )
+    
     # Nested serialization for related objects (read-only)
     current_leaders = serializers.SerializerMethodField(
         help_text="List of current leaders with their details"
@@ -271,6 +371,7 @@ class OrganizationalGroupSerializer(serializers.ModelSerializer):
             'updated_at',
             'type_display',
             'campus',
+            'knowledge_area',
             'current_leaders',
             'members',
             'initiatives',
@@ -480,6 +581,13 @@ class OrganizationalGroupCreateUpdateSerializer(OrganizationalGroupSerializer):
         help_text="ID of the campus where this group is located"
     )
     
+    # Write-only field for knowledge area foreign key
+    knowledge_area_id = serializers.IntegerField(
+        write_only=True,
+        required=True,
+        help_text="ID of the knowledge area for this group"
+    )
+    
     # Allow writing to members and initiatives fields
     member_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -495,7 +603,7 @@ class OrganizationalGroupCreateUpdateSerializer(OrganizationalGroupSerializer):
     )
     
     class Meta(OrganizationalGroupSerializer.Meta):
-        fields = OrganizationalGroupSerializer.Meta.fields + ['campus_id', 'member_ids', 'initiative_ids']
+        fields = OrganizationalGroupSerializer.Meta.fields + ['campus_id', 'knowledge_area_id', 'member_ids', 'initiative_ids']
     
     def validate_campus_id(self, value):
         """
@@ -514,6 +622,25 @@ class OrganizationalGroupCreateUpdateSerializer(OrganizationalGroupSerializer):
             Campus.objects.get(pk=value)
         except Campus.DoesNotExist:
             raise serializers.ValidationError(f"Campus with ID {value} does not exist.")
+        return value
+    
+    def validate_knowledge_area_id(self, value):
+        """
+        Validate knowledge_area_id field.
+        
+        Args:
+            value (int): Knowledge area ID to validate
+            
+        Returns:
+            int: Validated knowledge area ID
+            
+        Raises:
+            serializers.ValidationError: If knowledge area does not exist
+        """
+        try:
+            KnowledgeArea.objects.get(pk=value)
+        except KnowledgeArea.DoesNotExist:
+            raise serializers.ValidationError(f"Knowledge area with ID {value} does not exist.")
         return value
     
     def validate(self, data):

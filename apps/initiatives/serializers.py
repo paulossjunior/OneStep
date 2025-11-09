@@ -52,6 +52,9 @@ class InitiativeSerializer(serializers.ModelSerializer):
     team_count = serializers.SerializerMethodField(
         help_text="Number of team members assigned to this initiative"
     )
+    student_count = serializers.SerializerMethodField(
+        help_text="Number of students participating in this initiative"
+    )
     children_count = serializers.SerializerMethodField(
         help_text="Number of child initiatives under this initiative"
     )
@@ -80,7 +83,9 @@ class InitiativeSerializer(serializers.ModelSerializer):
             'coordinator',
             'coordinator_name',
             'team_members',
+            'students',
             'team_count',
+            'student_count',
             'children_count',
             'hierarchy_level',
             'created_at',
@@ -94,6 +99,7 @@ class InitiativeSerializer(serializers.ModelSerializer):
             'type_name',
             'type_code',
             'team_count',
+            'student_count',
             'children_count',
             'hierarchy_level',
             'parent_info'
@@ -110,6 +116,18 @@ class InitiativeSerializer(serializers.ModelSerializer):
             int: Number of team members
         """
         return obj.team_members.count()
+    
+    def get_student_count(self, obj):
+        """
+        Get the count of students for this initiative.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            int: Number of students
+        """
+        return obj.students.count()
     
     def get_children_count(self, obj):
         """
@@ -280,6 +298,11 @@ class InitiativeDetailSerializer(InitiativeSerializer):
         read_only=True,
         help_text="List of all team members with their complete information"
     )
+    students = PersonSerializer(
+        many=True,
+        read_only=True,
+        help_text="List of all students with their complete information"
+    )
     children = serializers.SerializerMethodField(
         help_text="List of child initiatives with their basic information"
     )
@@ -332,20 +355,26 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
     special handling.
     """
     
-    # Allow writing to team_members field
+    # Allow writing to team_members and students fields
     team_member_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
         required=False,
         help_text="List of person IDs to assign as team members"
     )
+    student_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text="List of person IDs to assign as students"
+    )
     
     class Meta(InitiativeSerializer.Meta):
-        fields = InitiativeSerializer.Meta.fields + ['team_member_ids']
+        fields = InitiativeSerializer.Meta.fields + ['team_member_ids', 'student_ids']
     
     def create(self, validated_data):
         """
-        Create a new Initiative instance with team members.
+        Create a new Initiative instance with team members and students.
         
         Args:
             validated_data (dict): Validated data
@@ -354,16 +383,20 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
             Initiative: Created initiative instance
         """
         team_member_ids = validated_data.pop('team_member_ids', [])
+        student_ids = validated_data.pop('student_ids', [])
         initiative = Initiative.objects.create(**validated_data)
         
         if team_member_ids:
             initiative.team_members.set(team_member_ids)
         
+        if student_ids:
+            initiative.students.set(student_ids)
+        
         return initiative
     
     def update(self, instance, validated_data):
         """
-        Update an existing Initiative instance with team members.
+        Update an existing Initiative instance with team members and students.
         
         Args:
             instance (Initiative): Initiative instance to update
@@ -373,6 +406,7 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
             Initiative: Updated initiative instance
         """
         team_member_ids = validated_data.pop('team_member_ids', None)
+        student_ids = validated_data.pop('student_ids', None)
         
         # Update regular fields
         for attr, value in validated_data.items():
@@ -382,5 +416,9 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         # Update team members if provided
         if team_member_ids is not None:
             instance.team_members.set(team_member_ids)
+        
+        # Update students if provided
+        if student_ids is not None:
+            instance.students.set(student_ids)
         
         return instance

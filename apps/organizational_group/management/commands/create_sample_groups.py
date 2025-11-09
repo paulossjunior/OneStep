@@ -9,7 +9,7 @@ Usage:
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from datetime import date, timedelta
-from apps.organizational_group.models import OrganizationalGroup, OrganizationalGroupLeadership
+from apps.organizational_group.models import OrganizationalGroup, OrganizationalGroupLeadership, KnowledgeArea, Campus
 from apps.people.models import Person
 from apps.initiatives.models import Initiative
 
@@ -124,14 +124,58 @@ class Command(BaseCommand):
         """Create sample groups with various configurations."""
         groups = []
         
+        # Get or create knowledge areas
+        cs_ka, _ = KnowledgeArea.objects.get_or_create(
+            name='Computer Science',
+            defaults={'description': 'Computer science and information technology'}
+        )
+        social_ka, _ = KnowledgeArea.objects.get_or_create(
+            name='Social Sciences',
+            defaults={'description': 'Social sciences and humanities'}
+        )
+        eng_ka, _ = KnowledgeArea.objects.get_or_create(
+            name='Engineering',
+            defaults={'description': 'Engineering and technology'}
+        )
+        health_ka, _ = KnowledgeArea.objects.get_or_create(
+            name='Health Sciences',
+            defaults={'description': 'Health and medical sciences'}
+        )
+        stats_ka, _ = KnowledgeArea.objects.get_or_create(
+            name='Statistics',
+            defaults={'description': 'Statistics and data science'}
+        )
+        agri_ka, _ = KnowledgeArea.objects.get_or_create(
+            name='Agriculture',
+            defaults={'description': 'Agricultural sciences'}
+        )
+        
+        # Get or create campuses
+        main_campus, _ = Campus.objects.get_or_create(
+            code='MAIN',
+            defaults={'name': 'Main Campus', 'location': 'Main Campus Location'}
+        )
+        north_campus, _ = Campus.objects.get_or_create(
+            code='NORTH',
+            defaults={'name': 'North Campus', 'location': 'North Campus Location'}
+        )
+        south_campus, _ = Campus.objects.get_or_create(
+            code='SOUTH',
+            defaults={'name': 'South Campus', 'location': 'South Campus Location'}
+        )
+        rural_campus, _ = Campus.objects.get_or_create(
+            code='RURAL',
+            defaults={'name': 'Rural Campus', 'location': 'Rural Campus Location'}
+        )
+        
         # Group 1: Research group with multiple leaders and history
         group1 = OrganizationalGroup.objects.create(
             name='Artificial Intelligence Research Lab',
             short_name='AI-Lab',
             url='https://ai-lab.university.edu',
             type=OrganizationalGroup.TYPE_RESEARCH,
-            knowledge_area='Computer Science',
-            campus='Main Campus'
+            knowledge_area=cs_ka,
+            campus=main_campus
         )
         
         # Add current leader
@@ -166,8 +210,8 @@ class Command(BaseCommand):
             short_name='COE',
             url='https://coe.university.edu',
             type=OrganizationalGroup.TYPE_EXTENSION,
-            knowledge_area='Social Sciences',
-            campus='North Campus'
+            knowledge_area=social_ka,
+            campus=north_campus
         )
         
         OrganizationalGroupLeadership.objects.create(
@@ -189,8 +233,8 @@ class Command(BaseCommand):
             short_name='SERC',
             url='https://serc.university.edu',
             type=OrganizationalGroup.TYPE_RESEARCH,
-            knowledge_area='Engineering',
-            campus='Main Campus'
+            knowledge_area=eng_ka,
+            campus=main_campus
         )
         
         # Add two current leaders (co-leaders)
@@ -220,8 +264,8 @@ class Command(BaseCommand):
             short_name='HWEP',
             url='',
             type=OrganizationalGroup.TYPE_EXTENSION,
-            knowledge_area='Health Sciences',
-            campus='South Campus'
+            knowledge_area=health_ka,
+            campus=south_campus
         )
         
         OrganizationalGroupLeadership.objects.create(
@@ -242,8 +286,8 @@ class Command(BaseCommand):
             short_name='DSAL',
             url='https://dsal.university.edu',
             type=OrganizationalGroup.TYPE_RESEARCH,
-            knowledge_area='Statistics',
-            campus='Main Campus'
+            knowledge_area=stats_ka,
+            campus=main_campus
         )
         
         # Historical leader
@@ -275,8 +319,8 @@ class Command(BaseCommand):
             short_name='AES',
             url='',
             type=OrganizationalGroup.TYPE_EXTENSION,
-            knowledge_area='Agriculture',
-            campus='Rural Campus'
+            knowledge_area=agri_ka,
+            campus=rural_campus
         )
         
         OrganizationalGroupLeadership.objects.create(
@@ -302,8 +346,8 @@ class Command(BaseCommand):
         for group in groups:
             self.stdout.write(f'\n{group.name} ({group.short_name})')
             self.stdout.write(f'  Type: {group.get_type_display()}')
-            self.stdout.write(f'  Campus: {group.campus}')
-            self.stdout.write(f'  Knowledge Area: {group.knowledge_area}')
+            self.stdout.write(f'  Campus: {group.campus.name}')
+            self.stdout.write(f'  Knowledge Area: {group.knowledge_area.name}')
             self.stdout.write(f'  Current Leaders: {group.leader_count()}')
             self.stdout.write(f'  Members: {group.member_count()}')
             self.stdout.write(f'  Initiatives: {group.initiative_count()}')

@@ -119,6 +119,7 @@ class Initiative(TimestampedModel):
         parent (ForeignKey): Parent initiative for hierarchical structure
         coordinator (ForeignKey): Person who coordinates this initiative
         team_members (ManyToManyField): People who are team members
+        students (ManyToManyField): Students participating in this initiative
     """
     
     name = models.CharField(
@@ -163,6 +164,12 @@ class Initiative(TimestampedModel):
         blank=True,
         related_name='team_initiatives',
         help_text="People who are team members of this initiative"
+    )
+    students = models.ManyToManyField(
+        'people.Person',
+        blank=True,
+        related_name='student_initiatives',
+        help_text="Students participating in this initiative"
     )
     
     class Meta:
@@ -241,6 +248,16 @@ class Initiative(TimestampedModel):
             int: Number of team members
         """
         return self.team_members.count()
+    
+    @property
+    def student_count(self):
+        """
+        Get the count of students for this initiative.
+        
+        Returns:
+            int: Number of students
+        """
+        return self.students.count()
     
     @property
     def children_count(self):

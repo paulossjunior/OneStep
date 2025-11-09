@@ -82,6 +82,34 @@ class TeamMemberInline(admin.TabularInline):
         return super().get_queryset(request).select_related('person')
 
 
+class StudentInline(admin.TabularInline):
+    """
+    Inline admin for student relationships (many-to-many).
+    
+    Allows editing student assignments directly from the Initiative admin page.
+    """
+    model = Initiative.students.through
+    extra = 1
+    verbose_name = "Student"
+    verbose_name_plural = "Students"
+    can_delete = True
+    
+    # Customize the display
+    autocomplete_fields = ['person']
+    
+    def get_queryset(self, request):
+        """
+        Optimize queryset for inline display.
+        
+        Args:
+            request: HTTP request object
+            
+        Returns:
+            QuerySet: Optimized queryset
+        """
+        return super().get_queryset(request).select_related('person')
+
+
 class ChildInitiativeInline(admin.TabularInline):
     """
     Inline admin for child initiatives (hierarchical relationship).
@@ -154,6 +182,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         'start_date_display',
         'end_date_display',
         'team_count_display',
+        'student_count_display',
         'children_count_display',
         'group_count_display',
         'hierarchy_level_display',
@@ -184,6 +213,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
         'team_count_display',
+        'student_count_display',
         'children_count_display',
         'group_count_display',
         'hierarchy_level_display',
@@ -206,7 +236,7 @@ class InitiativeAdmin(admin.ModelAdmin):
             'description': 'Hierarchical and coordination relationships.'
         }),
         ('Statistics', {
-            'fields': ('team_count_display', 'children_count_display', 'group_count_display', 'hierarchy_level_display', 'status_display'),
+            'fields': ('team_count_display', 'student_count_display', 'children_count_display', 'group_count_display', 'hierarchy_level_display', 'status_display'),
             'classes': ('collapse',),
             'description': 'Computed statistics and status information.'
         }),
@@ -218,7 +248,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     )
     
     # Inline configuration
-    inlines = [TeamMemberInline, ChildInitiativeInline, GroupInline]
+    inlines = [TeamMemberInline, StudentInline, ChildInitiativeInline, GroupInline]
     
     # Pagination and performance
     list_per_page = 25
@@ -251,12 +281,14 @@ class InitiativeAdmin(admin.ModelAdmin):
             'parent'
         ).prefetch_related(
             'team_members',
+            'students',
             'children'
         )
         
         # Add annotations for counts to improve performance
         queryset = queryset.annotate(
             annotated_team_count=models.Count('team_members', distinct=True),
+            annotated_student_count=models.Count('students', distinct=True),
             annotated_children_count=models.Count('children', distinct=True),
             annotated_group_count=models.Count('groups', distinct=True)
         )
@@ -387,6 +419,29 @@ class InitiativeAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #999;">No members</span>')
     team_count_display.short_description = 'Team Size'
     team_count_display.admin_order_field = 'annotated_team_count'
+    
+    def student_count_display(self, obj):
+        """
+        Display student count.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted student count
+        """
+        count = getattr(obj, 'annotated_student_count', obj.student_count)
+        
+        if count > 0:
+            return format_html(
+                '<strong>{}</strong> student{}',
+                count,
+                's' if count != 1 else ''
+            )
+        else:
+            return format_html('<span style="color: #999;">No students</span>')
+    student_count_display.short_description = 'Students'
+    student_count_display.admin_order_field = 'annotated_student_count'
     
     def children_count_display(self, obj):
         """
