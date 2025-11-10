@@ -86,7 +86,7 @@ class OrganizationAdmin(admin.ModelAdmin):
         }),
         ('Demanded Initiatives', {
             'fields': ('demanded_initiatives_count_display', 'demanded_initiatives_list_display'),
-            'description': 'Initiatives demanded/requested by units in this organization (for Demanding Partners).'
+            'description': 'Initiatives demanded/requested by this organization (for Demanding Partners).'
         }),
         ('Metadata', {
             'fields': ('id', 'created_at', 'updated_at'),
@@ -102,8 +102,8 @@ class OrganizationAdmin(admin.ModelAdmin):
             'units__type',
             'units__campus',
             'units__knowledge_area',
-            'units__demanded_initiatives',
-            'units__demanded_initiatives__type'
+            'demanded_initiatives',
+            'demanded_initiatives__type'
         )
     
     def description_preview(self, obj):
@@ -187,61 +187,37 @@ class OrganizationAdmin(admin.ModelAdmin):
     units_list_display.short_description = 'Organizational Units List'
     
     def demanded_initiatives_count_display(self, obj):
-        """Display count of initiatives demanded by units in this organization."""
-        # Get all units in this organization
-        units = obj.units.all()
+        """Display count of initiatives demanded by this organization."""
+        count = obj.demanded_initiatives.count()
         
-        # Count total demanded initiatives across all units
-        total_count = 0
-        for unit in units:
-            if hasattr(unit, 'demanded_initiatives'):
-                total_count += unit.demanded_initiatives.count()
-        
-        if total_count > 0:
+        if count > 0:
             return format_html(
                 '<strong>{}</strong> initiative{} demanded',
-                total_count,
-                's' if total_count != 1 else ''
+                count,
+                's' if count != 1 else ''
             )
         return format_html('<span style="color: #999;">No demanded initiatives</span>')
     demanded_initiatives_count_display.short_description = 'Demanded Initiatives'
     
     def demanded_initiatives_list_display(self, obj):
-        """Display list of initiatives demanded by units in this organization."""
-        # Get all units in this organization
-        units = obj.units.all()
+        """Display list of initiatives demanded by this organization."""
+        initiatives = obj.demanded_initiatives.all()
         
-        # Collect all demanded initiatives
-        initiatives_by_unit = []
-        for unit in units:
-            if hasattr(unit, 'demanded_initiatives'):
-                demanded = unit.demanded_initiatives.all()
-                if demanded:
-                    initiatives_by_unit.append((unit, demanded))
+        if not initiatives:
+            return format_html('<span style="color: #999;">No initiatives demanded by this organization</span>')
         
-        if not initiatives_by_unit:
-            return format_html('<span style="color: #999;">No initiatives demanded by units in this organization</span>')
-        
-        # Format output grouped by unit
-        output_parts = []
-        for unit, initiatives in initiatives_by_unit:
-            unit_url = reverse('admin:organizational_group_organizationalunit_change', args=[unit.pk])
-            output_parts.append(format_html(
-                '<strong><a href="{}">{}</a></strong> demands:',
-                unit_url,
-                unit.name
+        # Format output
+        links = []
+        for initiative in initiatives:
+            init_url = reverse('admin:initiatives_initiative_change', args=[initiative.pk])
+            links.append(format_html(
+                '<a href="{}" title="View initiative">{}</a> <span style="color: #666;">({})</span>',
+                init_url,
+                initiative.name,
+                initiative.type.name if initiative.type else 'Unknown'
             ))
-            
-            for initiative in initiatives:
-                init_url = reverse('admin:initiatives_initiative_change', args=[initiative.pk])
-                output_parts.append(format_html(
-                    '&nbsp;&nbsp;• <a href="{}" title="View initiative">{}</a> <span style="color: #666;">({})</span>',
-                    init_url,
-                    initiative.name,
-                    initiative.type.name if initiative.type else 'Unknown'
-                ))
         
-        return format_html('<br>'.join(output_parts))
+        return format_html('<br>'.join(links))
     demanded_initiatives_list_display.short_description = 'Demanded Initiatives List'
 
 
