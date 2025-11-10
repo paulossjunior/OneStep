@@ -347,11 +347,51 @@ backup-all: ## Backup both Django and Superset
 	@$(MAKE) superset-backup
 	@echo "$(GREEN)✓ Complete backup finished$(NC)"
 
-backup-db: ## Backup Django database only
+backup-db: ## Backup Django database with timestamp
 	@echo "$(BLUE)Backing up Django database...$(NC)"
-	docker exec -e PGPASSWORD=postgres onestep_db \
-		pg_dump -U postgres -d onestep_dev > backups/django_db_$(shell date +%Y%m%d_%H%M%S).sql
+	@mkdir -p backups/django
+	@docker exec -e PGPASSWORD=postgres onestep_db \
+		pg_dump -U postgres -d onestep_dev > backups/django/django_db_$(shell date +%Y%m%d_%H%M%S).sql
 	@echo "$(GREEN)✓ Django database backed up$(NC)"
+	@ls -lh backups/django/django_db_*.sql | tail -1
+
+backup-db-named: ## Backup Django database with custom name (usage: make backup-db-named NAME=my_backup)
+	@if [ -z "$(NAME)" ]; then \
+		echo "$(RED)Error: NAME parameter required$(NC)"; \
+		echo "$(YELLOW)Usage: make backup-db-named NAME=my_backup$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Backing up Django database: $(NAME)...$(NC)"
+	@mkdir -p backups/django
+	@docker exec -e PGPASSWORD=postgres onestep_db \
+		pg_dump -U postgres -d onestep_dev > backups/django/$(NAME).sql
+	@echo "$(GREEN)✓ Django database backed up: $(NAME)$(NC)"
+	@ls -lh backups/django/$(NAME).sql
+
+list-db-backups: ## List all Django database backups
+	@echo "$(BLUE)Available Django database backups:$(NC)"
+	@echo ""
+	@if [ -d "backups/django" ] && [ -n "$$(ls -A backups/django/*.sql 2>/dev/null)" ]; then \
+		ls -lht backups/django/*.sql | awk '{printf "  %-50s %5s %s %s %s\n", $$9, $$5, $$6, $$7, $$8}'; \
+		echo ""; \
+		echo "$(YELLOW)Total size: $$(du -sh backups/django 2>/dev/null | cut -f1)$(NC)"; \
+		echo ""; \
+		echo "$(BLUE)To restore: make restore-db FILE=<backup_file>$(NC)"; \
+	else \
+		echo "$(YELLOW)  No backups found$(NC)"; \
+		echo ""; \
+		echo "$(BLUE)Create a backup: make backup-db$(NC)"; \
+	fi
+
+cleanup-db-backups: ## Remove old Django database backups (keeps last 7)
+	@echo "$(BLUE)Cleaning up old Django database backups...$(NC)"
+	@if [ -d "backups/django" ]; then \
+		cd backups/django && ls -t django_db_*.sql 2>/dev/null | tail -n +8 | xargs -r rm -f; \
+		remaining=$$(ls -1 django_db_*.sql 2>/dev/null | wc -l); \
+		echo "$(GREEN)✓ Cleanup complete. $$remaining backup(s) remaining$(NC)"; \
+	else \
+		echo "$(YELLOW)No backups directory found$(NC)"; \
+	fi
 
 restore-db: ## Restore Django database (usage: make restore-db FILE=backup.sql)
 	@echo "$(BLUE)Restoring Django database from $(FILE)...$(NC)"
