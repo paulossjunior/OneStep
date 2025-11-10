@@ -125,6 +125,32 @@ make superset-up
 | `make superset-shell` | Open Superset container shell |
 | `make superset-reset` | Reset admin password |
 
+### Superset Backup & Restore
+
+Protect your dashboards and data with automated backup commands:
+
+```bash
+# Create backup
+make superset-backup                    # Timestamped backup
+make superset-backup-named NAME=my_backup  # Named backup
+make superset-backup-daily              # Daily backup
+
+# List backups
+make superset-list-backups
+
+# Restore backup
+make superset-restore BACKUP=backup_name
+
+# Manage backups
+make superset-backup-info BACKUP=backup_name
+make superset-cleanup-backups           # Keep last 7
+```
+
+**Quick Start:**
+- See [BACKUP_QUICK_START.md](BACKUP_QUICK_START.md) for common workflows
+- Full guide: [docs/SUPERSET_BACKUP_RESTORE.md](docs/SUPERSET_BACKUP_RESTORE.md)
+- All commands: [docs/MAKEFILE_REFERENCE.md](docs/MAKEFILE_REFERENCE.md)
+
 ## Docker Commands Reference
 
 All Docker operations can be performed using the Makefile commands:
