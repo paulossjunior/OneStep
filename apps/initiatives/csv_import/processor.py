@@ -152,20 +152,15 @@ class ResearchProjectImportProcessor:
             
             # Process demanding partner (ParceiroDemandante)
             if row.get('ParceiroDemandante'):
-                # Get knowledge area for the demanding partner (use initiative's knowledge area if available)
-                ka = knowledge_area if row.get('AreaConhecimento') else None
-                
                 # Create or get demanding partner organization
-                demanding_partner = self.group_handler.get_or_create_demanding_partner(
-                    name=row['ParceiroDemandante'],
-                    knowledge_area=ka
+                demanding_partner = self.group_handler.get_or_create_demanding_partner_organization(
+                    name=row['ParceiroDemandante']
                 )
                 
                 if demanding_partner:
                     # Set the demanding partner for this initiative
                     initiative.demanding_partner = demanding_partner
-                    # Save without calling full_clean() to avoid validation errors
-                    super(type(initiative), initiative).save()
+                    initiative.save()
             
             self.reporter.add_success(row_number, row['Titulo'])
             

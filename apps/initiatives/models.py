@@ -178,7 +178,7 @@ class Initiative(TimestampedModel):
         help_text="Knowledge areas associated with this initiative"
     )
     demanding_partner = models.ForeignKey(
-        'organizational_group.OrganizationalUnit',
+        'organizational_group.Organization',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

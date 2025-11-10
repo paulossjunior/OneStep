@@ -67,6 +67,13 @@ class InitiativeSerializer(serializers.ModelSerializer):
         help_text="Basic information about the parent initiative (id, name, type)"
     )
     
+    # Demanding partner information
+    demanding_partner_name = serializers.CharField(
+        source='demanding_partner.name',
+        read_only=True,
+        help_text="Name of the organization that demands this initiative"
+    )
+    
     class Meta:
         model = Initiative
         fields = [
@@ -84,6 +91,8 @@ class InitiativeSerializer(serializers.ModelSerializer):
             'coordinator_name',
             'team_members',
             'students',
+            'demanding_partner',
+            'demanding_partner_name',
             'team_count',
             'student_count',
             'children_count',
@@ -98,6 +107,7 @@ class InitiativeSerializer(serializers.ModelSerializer):
             'coordinator_name',
             'type_name',
             'type_code',
+            'demanding_partner_name',
             'team_count',
             'student_count',
             'children_count',
@@ -303,6 +313,9 @@ class InitiativeDetailSerializer(InitiativeSerializer):
         read_only=True,
         help_text="List of all students with their complete information"
     )
+    demanding_partner = serializers.SerializerMethodField(
+        help_text="Complete information about the organization that demands this initiative"
+    )
     children = serializers.SerializerMethodField(
         help_text="List of child initiatives with their basic information"
     )
@@ -345,6 +358,22 @@ class InitiativeDetailSerializer(InitiativeSerializer):
         if obj.parent:
             return InitiativeSerializer(obj.parent, context=self.context).data
         return None
+    
+    def get_demanding_partner(self, obj):
+        """
+        Get demanding partner organization with complete information.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            dict or None: Demanding partner organization data
+        """
+        if obj.demanding_partner:
+            # Import here to avoid circular import
+            from apps.organizational_group.serializers import OrganizationSerializer
+            return OrganizationSerializer(obj.demanding_partner, context=self.context).data
+        return None
 
 
 class InitiativeCreateUpdateSerializer(InitiativeSerializer):
@@ -368,9 +397,39 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         required=False,
         help_text="List of person IDs to assign as students"
     )
+    demanding_partner_id = serializers.IntegerField(
+        write_only=True,
+        required=False,
+        allow_null=True,
+        help_text="ID of the organization that demands this initiative"
+    )
     
     class Meta(InitiativeSerializer.Meta):
-        fields = InitiativeSerializer.Meta.fields + ['team_member_ids', 'student_ids']
+        fields = InitiativeSerializer.Meta.fields + ['team_member_ids', 'student_ids', 'demanding_partner_id']
+    
+    def validate_demanding_partner_id(self, value):
+        """
+        Validate demanding_partner_id field.
+        
+        Args:
+            value: Organization ID
+            
+        Returns:
+            Organization instance or None
+            
+        Raises:
+            serializers.ValidationError: If organization doesn't exist
+        """
+        if value is None:
+            return None
+        
+        # Import here to avoid circular import
+        from apps.organizational_group.models import Organization
+        
+        try:
+            return Organization.objects.get(pk=value)
+        except Organization.DoesNotExist:
+            raise serializers.ValidationError(f"Organization with ID {value} does not exist.")
     
     def create(self, validated_data):
         """
@@ -384,6 +443,12 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         """
         team_member_ids = validated_data.pop('team_member_ids', [])
         student_ids = validated_data.pop('student_ids', [])
+        demanding_partner_id = validated_data.pop('demanding_partner_id', None)
+        
+        # Set demanding_partner if provided
+        if demanding_partner_id is not None:
+            validated_data['demanding_partner'] = demanding_partner_id
+        
         initiative = Initiative.objects.create(**validated_data)
         
         if team_member_ids:
@@ -407,6 +472,11 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         """
         team_member_ids = validated_data.pop('team_member_ids', None)
         student_ids = validated_data.pop('student_ids', None)
+        demanding_partner_id = validated_data.pop('demanding_partner_id', None)
+        
+        # Update demanding_partner if provided
+        if 'demanding_partner_id' in self.initial_data:
+            instance.demanding_partner = demanding_partner_id
         
         # Update regular fields
         for attr, value in validated_data.items():

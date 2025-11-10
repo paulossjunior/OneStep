@@ -148,16 +148,15 @@ class GroupHandler:
                 models.Q(short_name__iexact=normalized_name)
             ).first()
     
-    def get_or_create_demanding_partner(self, name: str, knowledge_area: Optional[KnowledgeArea] = None) -> Optional[OrganizationalUnit]:
+    def get_or_create_demanding_partner_organization(self, name: str) -> Optional['Organization']:
         """
-        Get or create a demanding partner organization (OrganizationalUnit).
+        Get or create a demanding partner organization (Organization).
         
         Args:
             name: Demanding partner organization name
-            knowledge_area: Optional knowledge area to associate
             
         Returns:
-            OrganizationalUnit: Existing or newly created unit, or None if name is empty
+            Organization: Existing or newly created organization, or None if name is empty
         """
         if not name or not name.strip():
             return None
@@ -165,66 +164,25 @@ class GroupHandler:
         # Normalize name
         normalized_name = self.normalize_name(name)
         
-        # Try to find existing unit (case-insensitive)
-        unit = OrganizationalUnit.objects.filter(
-            models.Q(name__iexact=normalized_name) | 
-            models.Q(short_name__iexact=normalized_name)
-        ).first()
+        # Try to find existing organization (case-insensitive)
+        from apps.organizational_group.models import Organization
         
-        if unit:
-            return unit
+        organization = Organization.objects.filter(name__iexact=normalized_name).first()
+        
+        if organization:
+            return organization
         
         # Create new demanding partner organization
         try:
-            from apps.organizational_group.models import Organization, OrganizationalType, Campus
-            
-            # Get or create default organization for demanding partners
-            organization, _ = Organization.objects.get_or_create(
-                name='Demanding Partners',
-                defaults={'description': 'Organizations that demand or request initiatives'}
-            )
-            
-            # Get or create Extension type (demanding partners are typically extension/service clients)
-            org_type, _ = OrganizationalType.objects.get_or_create(
-                code='extension',
-                defaults={
-                    'name': 'Extension',
-                    'description': 'Extension and service organizations'
-                }
-            )
-            
-            # Get or create default campus for demanding partners
-            campus, _ = Campus.objects.get_or_create(
-                code='PARTNER',
-                defaults={
-                    'name': 'Partner Organizations',
-                    'location': 'External partner organizations'
-                }
-            )
-            
-            # Generate short name from full name
-            short_name = self.generate_short_name(normalized_name)
-            
-            # Create the unit
-            unit = OrganizationalUnit(
+            organization = Organization.objects.create(
                 name=normalized_name,
-                short_name=short_name,
-                type=org_type,
-                organization=organization,
-                campus=campus,
-                knowledge_area=knowledge_area
+                description='Organization that demands or requests initiatives'
             )
-            # Save without calling full_clean() to avoid validation errors from schema conflicts
-            super(OrganizationalUnit, unit).save()
-            
-            return unit
+            return organization
             
         except IntegrityError:
             # Race condition - another process created it
-            return OrganizationalUnit.objects.filter(
-                models.Q(name__iexact=normalized_name) | 
-                models.Q(short_name__iexact=normalized_name)
-            ).first()
+            return Organization.objects.filter(name__iexact=normalized_name).first()
     
     def generate_short_name(self, name: str) -> str:
         """

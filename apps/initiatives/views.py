@@ -187,7 +187,8 @@ class InitiativeViewSet(viewsets.ModelViewSet):
         """
         queryset = Initiative.objects.select_related(
             'coordinator',
-            'parent'
+            'parent',
+            'demanding_partner'
         ).prefetch_related(
             'team_members',
             'children'

@@ -52,6 +52,22 @@ class InitiativeFilter(django_filters.FilterSet):
         help_text='Filter by parent initiative ID'
     )
     
+    demanding_partner = django_filters.NumberFilter(
+        field_name='demanding_partner__id',
+        help_text='Filter by demanding partner organization ID'
+    )
+    
+    demanding_partner_name = django_filters.CharFilter(
+        field_name='demanding_partner__name',
+        lookup_expr='icontains',
+        help_text='Filter by demanding partner name (case-insensitive partial match)'
+    )
+    
+    has_demanding_partner = django_filters.BooleanFilter(
+        method='filter_has_demanding_partner',
+        help_text='Filter initiatives that have a demanding partner'
+    )
+    
     # Hierarchical filters
     is_root = django_filters.BooleanFilter(
         method='filter_is_root',
@@ -148,6 +164,7 @@ class InitiativeFilter(django_filters.FilterSet):
             'end_date': ['exact', 'gte', 'lte', 'isnull'],
             'coordinator': ['exact'],
             'parent': ['exact', 'isnull'],
+            'demanding_partner': ['exact', 'isnull'],
             'created_at': ['exact', 'gte', 'lte'],
             'updated_at': ['exact', 'gte', 'lte'],
         }
@@ -321,4 +338,22 @@ class InitiativeFilter(django_filters.FilterSet):
             return queryset.annotate(
                 team_size=models.Count('team_members', distinct=True)
             ).filter(team_size__lte=value)
+        return queryset
+    
+    def filter_has_demanding_partner(self, queryset, name, value):
+        """
+        Filter initiatives that have a demanding partner.
+        
+        Args:
+            queryset: Base queryset
+            name: Filter field name
+            value: Boolean value
+            
+        Returns:
+            QuerySet: Filtered queryset
+        """
+        if value is True:
+            return queryset.filter(demanding_partner__isnull=False)
+        elif value is False:
+            return queryset.filter(demanding_partner__isnull=True)
         return queryset

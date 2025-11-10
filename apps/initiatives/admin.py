@@ -245,7 +245,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         }),
         ('Organizations', {
             'fields': ('demanding_partner', 'demanding_partner_display', 'external_groups_count_display', 'external_groups_list_display'),
-            'description': 'Organizational relationships: demanding partner and external research groups.'
+            'description': 'Organizational relationships: demanding partner organization and external research groups.'
         }),
         ('Timeline', {
             'fields': ('start_date', 'end_date'),
@@ -667,7 +667,7 @@ class InitiativeAdmin(admin.ModelAdmin):
             str: HTML formatted demanding partner with link
         """
         if obj.demanding_partner:
-            url = reverse('admin:organizational_group_organizationalunit_change', args=[obj.demanding_partner.pk])
+            url = reverse('admin:organizational_group_organization_change', args=[obj.demanding_partner.pk])
             return format_html(
                 '<a href="{}" title="View demanding partner">{}</a>',
                 url,

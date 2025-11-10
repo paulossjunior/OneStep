@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership, KnowledgeArea
+from .models import Campus, OrganizationalGroup, OrganizationalGroupLeadership, KnowledgeArea, Organization
 from apps.people.serializers import PersonSerializer
 from apps.initiatives.serializers import InitiativeSerializer
 
@@ -81,6 +81,100 @@ class KnowledgeAreaSerializer(serializers.ModelSerializer):
         """
         # Create a temporary instance for model validation
         instance = self.instance or KnowledgeArea()
+        
+        # Update instance with validated data
+        for attr, value in data.items():
+            setattr(instance, attr, value)
+        
+        try:
+            # Run model's clean method for additional validation
+            instance.clean()
+        except DjangoValidationError as e:
+            # Convert Django validation errors to DRF validation errors
+            if hasattr(e, 'error_dict'):
+                raise serializers.ValidationError(e.error_dict)
+            else:
+                raise serializers.ValidationError(e.messages)
+        
+        return data
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Organization model.
+    
+    Provides serialization for Organization CRUD operations with proper validation
+    and additional computed fields for API responses.
+    """
+    
+    unit_count = serializers.SerializerMethodField(
+        help_text="Number of organizational units in this organization"
+    )
+    
+    class Meta:
+        model = Organization
+        fields = [
+            'id',
+            'name',
+            'description',
+            'unit_count',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id',
+            'created_at',
+            'updated_at',
+            'unit_count'
+        ]
+    
+    def get_unit_count(self, obj):
+        """
+        Get the count of organizational units in this organization.
+        
+        Args:
+            obj (Organization): Organization instance
+            
+        Returns:
+            int: Number of organizational units in this organization
+        """
+        # Use annotated count if available, otherwise call method
+        if hasattr(obj, 'annotated_unit_count'):
+            return obj.annotated_unit_count
+        return obj.unit_count()
+    
+    def validate_name(self, value):
+        """
+        Validate name field.
+        
+        Args:
+            value (str): Name value to validate
+            
+        Returns:
+            str: Validated and cleaned name
+            
+        Raises:
+            serializers.ValidationError: If name is empty after stripping
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Organization name cannot be empty.")
+        return value.strip()
+    
+    def validate(self, data):
+        """
+        Object-level validation.
+        
+        Args:
+            data (dict): Validated data dictionary
+            
+        Returns:
+            dict: Validated data
+            
+        Raises:
+            serializers.ValidationError: If validation fails
+        """
+        # Create a temporary instance for model validation
+        instance = self.instance or Organization()
         
         # Update instance with validated data
         for attr, value in data.items():
