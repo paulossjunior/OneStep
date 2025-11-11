@@ -20,6 +20,7 @@ from rest_framework_simplejwt.views import (
 from apps.people.views import PersonViewSet
 from apps.initiatives.views import InitiativeViewSet
 from apps.organizational_group.views import OrganizationalGroupViewSet, CampusViewSet
+from apps.scholarships.views import ScholarshipTypeViewSet, ScholarshipViewSet
 
 
 # API Root view
@@ -39,6 +40,8 @@ def api_root(request, format=None):
             'initiatives': request.build_absolute_uri('/api/v1/initiatives/'),
             'groups': request.build_absolute_uri('/api/v1/groups/'),
             'campuses': request.build_absolute_uri('/api/v1/campuses/'),
+            'scholarships': request.build_absolute_uri('/api/v1/scholarships/'),
+            'scholarship_types': request.build_absolute_uri('/api/v1/scholarship-types/'),
             'auth': {
                 'token': request.build_absolute_uri('/api/v1/auth/token/'),
                 'token_refresh': request.build_absolute_uri('/api/v1/auth/token/refresh/'),
@@ -63,6 +66,8 @@ router.register(r'people', PersonViewSet, basename='person')
 router.register(r'initiatives', InitiativeViewSet, basename='initiative')
 router.register(r'organizationalgroup', OrganizationalGroupViewSet, basename='organizationalgroup')
 router.register(r'campuses', CampusViewSet, basename='campus')
+router.register(r'scholarship-types', ScholarshipTypeViewSet, basename='scholarshiptype')
+router.register(r'scholarships', ScholarshipViewSet, basename='scholarship')
 
 # API v1 URL patterns
 v1_patterns = [
