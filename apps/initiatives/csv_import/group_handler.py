@@ -148,9 +148,88 @@ class GroupHandler:
                 models.Q(short_name__iexact=normalized_name)
             ).first()
     
+    def normalize_organization_name(self, name: str) -> str:
+        """
+        Normalize organization name by removing common suffixes and patterns.
+        This helps identify similar organizations like "ArcelorMittal" and "ArcelorMittal Tubarão".
+        
+        Args:
+            name: Organization name
+            
+        Returns:
+            str: Normalized organization name
+        """
+        import re
+        
+        if not name:
+            return ""
+        
+        # Convert to title case
+        normalized = name.strip().title()
+        
+        # Remove content in parentheses (e.g., "ArcelorMittal (Convênio 02/2024)" -> "ArcelorMittal")
+        normalized = re.sub(r'\s*\([^)]*\)', '', normalized)
+        
+        # Remove common suffixes and location names
+        # List of patterns to remove (case-insensitive)
+        patterns_to_remove = [
+            r'\s+Tubarão$',
+            r'\s+Serra$',
+            r'\s+Vitória$',
+            r'\s+ES$',
+            r'\s+Espírito Santo$',
+            r'\s+S\.?A\.?$',
+            r'\s+Ltda\.?$',
+            r'\s+Ltd\.?$',
+            r'\s+Inc\.?$',
+            r'\s+Corporation$',
+            r'\s+Corp\.?$',
+        ]
+        
+        for pattern in patterns_to_remove:
+            normalized = re.sub(pattern, '', normalized, flags=re.IGNORECASE)
+        
+        # Remove extra whitespace
+        normalized = ' '.join(normalized.split())
+        
+        return normalized.strip()
+    
+    def find_similar_organization(self, name: str) -> Optional['Organization']:
+        """
+        Find an existing organization with a similar name.
+        
+        Args:
+            name: Organization name to search for
+            
+        Returns:
+            Organization: Existing organization with similar name, or None
+        """
+        from apps.organizational_group.models import Organization
+        
+        # Normalize the input name
+        normalized_input = self.normalize_organization_name(name)
+        
+        if not normalized_input:
+            return None
+        
+        # Try exact match first (case-insensitive)
+        org = Organization.objects.filter(name__iexact=normalized_input).first()
+        if org:
+            return org
+        
+        # Try to find organizations with similar normalized names
+        all_orgs = Organization.objects.all()
+        for org in all_orgs:
+            normalized_existing = self.normalize_organization_name(org.name)
+            if normalized_existing.lower() == normalized_input.lower():
+                return org
+        
+        return None
+    
     def get_or_create_demanding_partner_organization(self, name: str) -> Optional['Organization']:
         """
         Get or create a demanding partner organization (Organization).
+        Uses name normalization to avoid creating duplicate organizations with similar names.
         
         Args:
             name: Demanding partner organization name
@@ -161,16 +240,15 @@ class GroupHandler:
         if not name or not name.strip():
             return None
         
-        # Normalize name
-        normalized_name = self.normalize_name(name)
-        
-        # Try to find existing organization (case-insensitive)
+        # Try to find similar existing organization first
         from apps.organizational_group.models import Organization
         
-        organization = Organization.objects.filter(name__iexact=normalized_name).first()
+        existing_org = self.find_similar_organization(name)
+        if existing_org:
+            return existing_org
         
-        if organization:
-            return organization
+        # Normalize name for storage
+        normalized_name = self.normalize_name(name)
         
         # Create new demanding partner organization
         try:
@@ -182,7 +260,8 @@ class GroupHandler:
             
         except IntegrityError:
             # Race condition - another process created it
-            return Organization.objects.filter(name__iexact=normalized_name).first()
+            # Try to find it again with normalization
+            return self.find_similar_organization(name) or Organization.objects.filter(name__iexact=normalized_name).first()
     
     def generate_short_name(self, name: str) -> str:
         """

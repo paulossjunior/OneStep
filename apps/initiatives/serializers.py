@@ -55,6 +55,9 @@ class InitiativeSerializer(serializers.ModelSerializer):
     student_count = serializers.SerializerMethodField(
         help_text="Number of students participating in this initiative"
     )
+    partnerships_count = serializers.SerializerMethodField(
+        help_text="Number of partnership organizational units"
+    )
     children_count = serializers.SerializerMethodField(
         help_text="Number of child initiatives under this initiative"
     )
@@ -93,6 +96,8 @@ class InitiativeSerializer(serializers.ModelSerializer):
             'students',
             'demanding_partner',
             'demanding_partner_name',
+            'partnerships',
+            'partnerships_count',
             'team_count',
             'student_count',
             'children_count',
@@ -108,6 +113,7 @@ class InitiativeSerializer(serializers.ModelSerializer):
             'type_name',
             'type_code',
             'demanding_partner_name',
+            'partnerships_count',
             'team_count',
             'student_count',
             'children_count',
@@ -138,6 +144,18 @@ class InitiativeSerializer(serializers.ModelSerializer):
             int: Number of students
         """
         return obj.students.count()
+    
+    def get_partnerships_count(self, obj):
+        """
+        Get the count of partnerships for this initiative.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            int: Number of partnerships
+        """
+        return obj.partnerships_count
     
     def get_children_count(self, obj):
         """
@@ -403,9 +421,15 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         allow_null=True,
         help_text="ID of the organization that demands this initiative"
     )
+    partnership_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text="List of organizational unit IDs to assign as partnerships"
+    )
     
     class Meta(InitiativeSerializer.Meta):
-        fields = InitiativeSerializer.Meta.fields + ['team_member_ids', 'student_ids', 'demanding_partner_id']
+        fields = InitiativeSerializer.Meta.fields + ['team_member_ids', 'student_ids', 'demanding_partner_id', 'partnership_ids']
     
     def validate_demanding_partner_id(self, value):
         """
@@ -433,7 +457,7 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
     
     def create(self, validated_data):
         """
-        Create a new Initiative instance with team members and students.
+        Create a new Initiative instance with team members, students, and partnerships.
         
         Args:
             validated_data (dict): Validated data
@@ -443,6 +467,7 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         """
         team_member_ids = validated_data.pop('team_member_ids', [])
         student_ids = validated_data.pop('student_ids', [])
+        partnership_ids = validated_data.pop('partnership_ids', [])
         demanding_partner_id = validated_data.pop('demanding_partner_id', None)
         
         # Set demanding_partner if provided
@@ -457,11 +482,14 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         if student_ids:
             initiative.students.set(student_ids)
         
+        if partnership_ids:
+            initiative.partnerships.set(partnership_ids)
+        
         return initiative
     
     def update(self, instance, validated_data):
         """
-        Update an existing Initiative instance with team members and students.
+        Update an existing Initiative instance with team members, students, and partnerships.
         
         Args:
             instance (Initiative): Initiative instance to update
@@ -472,6 +500,7 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         """
         team_member_ids = validated_data.pop('team_member_ids', None)
         student_ids = validated_data.pop('student_ids', None)
+        partnership_ids = validated_data.pop('partnership_ids', None)
         demanding_partner_id = validated_data.pop('demanding_partner_id', None)
         
         # Update demanding_partner if provided
@@ -490,5 +519,9 @@ class InitiativeCreateUpdateSerializer(InitiativeSerializer):
         # Update students if provided
         if student_ids is not None:
             instance.students.set(student_ids)
+        
+        # Update partnerships if provided
+        if partnership_ids is not None:
+            instance.partnerships.set(partnership_ids)
         
         return instance

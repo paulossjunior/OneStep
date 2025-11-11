@@ -185,6 +185,12 @@ class Initiative(TimestampedModel):
         related_name='demanded_initiatives',
         help_text="Organization that demands/requests this initiative"
     )
+    partnerships = models.ManyToManyField(
+        'organizational_group.OrganizationalUnit',
+        blank=True,
+        related_name='partnership_initiatives',
+        help_text="Organizational units that are partners in this initiative"
+    )
     
     class Meta:
         ordering = ['name']
@@ -385,3 +391,57 @@ class Initiative(TimestampedModel):
             organizational_unit: OrganizationalUnit instance to remove
         """
         self.units.remove(organizational_unit)
+    
+    @property
+    def partnerships_count(self):
+        """
+        Get the count of partnership organizational units for this initiative.
+        
+        Returns:
+            int: Number of partnership organizational units
+        """
+        return self.partnerships.count()
+    
+    def get_partnerships_by_type(self, type_code):
+        """
+        Get partnership organizational units filtered by type.
+        
+        Args:
+            type_code (str): Type code (e.g., 'research', 'extension')
+            
+        Returns:
+            QuerySet: Filtered partnership organizational units
+        """
+        return self.partnerships.filter(type__code=type_code)
+    
+    def get_partnerships_by_campus(self, campus):
+        """
+        Get partnership organizational units filtered by campus.
+        
+        Args:
+            campus: Campus instance or campus name
+            
+        Returns:
+            QuerySet: Filtered partnership organizational units
+        """
+        if isinstance(campus, str):
+            return self.partnerships.filter(campus__name__iexact=campus)
+        return self.partnerships.filter(campus=campus)
+    
+    def add_partnership(self, organizational_unit):
+        """
+        Add an organizational unit as a partnership.
+        
+        Args:
+            organizational_unit: OrganizationalUnit instance to add
+        """
+        self.partnerships.add(organizational_unit)
+    
+    def remove_partnership(self, organizational_unit):
+        """
+        Remove an organizational unit from partnerships.
+        
+        Args:
+            organizational_unit: OrganizationalUnit instance to remove
+        """
+        self.partnerships.remove(organizational_unit)

@@ -224,6 +224,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         'student_count_display',
         'children_count_display',
         'unit_count_display',
+        'partnerships_count_display',
         'external_groups_count_display',
         'external_groups_list_display',
         'knowledge_areas_count_display',
@@ -244,8 +245,8 @@ class InitiativeAdmin(admin.ModelAdmin):
             'description': 'Knowledge areas associated with this initiative.'
         }),
         ('Organizations', {
-            'fields': ('demanding_partner', 'demanding_partner_display', 'external_groups_count_display', 'external_groups_list_display'),
-            'description': 'Organizational relationships: demanding partner organization and external research groups.'
+            'fields': ('demanding_partner', 'demanding_partner_display', 'partnerships', 'partnerships_count_display', 'external_groups_count_display', 'external_groups_list_display'),
+            'description': 'Organizational relationships: demanding partner organization, partnerships, and external research groups.'
         }),
         ('Timeline', {
             'fields': ('start_date', 'end_date'),
@@ -284,7 +285,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     autocomplete_fields = ['coordinator', 'parent']
     
     # Filter horizontal for many-to-many fields
-    filter_horizontal = ['knowledge_areas', 'team_members', 'students']
+    filter_horizontal = ['knowledge_areas', 'team_members', 'students', 'partnerships']
     
     # Custom changelist template
     change_list_template = 'admin/initiatives/initiative/change_list.html'
@@ -397,7 +398,8 @@ class InitiativeAdmin(admin.ModelAdmin):
             'students',
             'children',
             'knowledge_areas',
-            'units'
+            'units',
+            'partnerships'
         )
         
         # Add annotations for counts to improve performance
@@ -655,6 +657,28 @@ class InitiativeAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #999;">No units</span>')
     unit_count_display.short_description = 'Units'
     unit_count_display.admin_order_field = 'annotated_unit_count'
+    
+    def partnerships_count_display(self, obj):
+        """
+        Display partnerships count.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted partnerships count
+        """
+        count = obj.partnerships_count
+        
+        if count > 0:
+            return format_html(
+                '<strong>{}</strong> partnership{}',
+                count,
+                's' if count != 1 else ''
+            )
+        else:
+            return format_html('<span style="color: #999;">No partnerships</span>')
+    partnerships_count_display.short_description = 'Partnerships'
     
     def demanding_partner_display(self, obj):
         """

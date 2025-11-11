@@ -129,26 +129,24 @@ class ResearchProjectImportProcessor:
                     # Sync knowledge areas from initiatives to unit
                     unit.sync_knowledge_areas_from_initiatives()
             
-            # Process external research groups (GrupoPesquisaExterno)
+            # Process partnerships (GrupoPesquisaExterno)
             if row.get('GrupoPesquisaExterno'):
-                # Parse multiple external groups (comma-separated)
-                external_groups = [g.strip() for g in row['GrupoPesquisaExterno'].split(',') if g.strip()]
+                # Parse multiple partnership groups (comma-separated)
+                partnership_groups = [g.strip() for g in row['GrupoPesquisaExterno'].split(',') if g.strip()]
                 
-                for group_name in external_groups:
-                    # Get knowledge area for the external group (use initiative's knowledge area if available)
+                for group_name in partnership_groups:
+                    # Get knowledge area for the partnership (use initiative's knowledge area if available)
                     ka = knowledge_area if row.get('AreaConhecimento') else None
                     
-                    # Create or get external research group
-                    external_unit = self.group_handler.get_or_create_external_research_group(
+                    # Create or get partnership organizational unit
+                    partnership_unit = self.group_handler.get_or_create_external_research_group(
                         name=group_name,
                         knowledge_area=ka
                     )
                     
-                    if external_unit:
-                        # Add initiative to external unit's initiatives
-                        external_unit.initiatives.add(initiative)
-                        # Sync knowledge areas from initiatives to unit
-                        external_unit.sync_knowledge_areas_from_initiatives()
+                    if partnership_unit:
+                        # Add organizational unit as a partnership
+                        initiative.add_partnership(partnership_unit)
             
             # Process demanding partner (ParceiroDemandante)
             if row.get('ParceiroDemandante'):
