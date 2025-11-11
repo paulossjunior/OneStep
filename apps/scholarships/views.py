@@ -22,6 +22,55 @@ from .serializers import (
 from .filters import ScholarshipTypeFilter, ScholarshipFilter
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List scholarship types",
+        description="Retrieve a paginated list of all scholarship types with filtering and search capabilities.",
+        parameters=[
+            OpenApiParameter(
+                name='is_active',
+                type=OpenApiTypes.BOOL,
+                description='Filter by active status'
+            ),
+            OpenApiParameter(
+                name='search',
+                type=OpenApiTypes.STR,
+                description='Search by name, code, or description'
+            ),
+            OpenApiParameter(
+                name='ordering',
+                type=OpenApiTypes.STR,
+                description='Order by: name, code, is_active, created_at, updated_at'
+            ),
+        ],
+        tags=['Scholarship Types']
+    ),
+    create=extend_schema(
+        summary="Create scholarship type",
+        description="Create a new scholarship type with name, code, and description.",
+        tags=['Scholarship Types']
+    ),
+    retrieve=extend_schema(
+        summary="Get scholarship type details",
+        description="Retrieve detailed information about a specific scholarship type including scholarship count.",
+        tags=['Scholarship Types']
+    ),
+    update=extend_schema(
+        summary="Update scholarship type",
+        description="Update all fields of a scholarship type.",
+        tags=['Scholarship Types']
+    ),
+    partial_update=extend_schema(
+        summary="Partially update scholarship type",
+        description="Update specific fields of a scholarship type.",
+        tags=['Scholarship Types']
+    ),
+    destroy=extend_schema(
+        summary="Delete scholarship type",
+        description="Delete a scholarship type. Cannot delete if scholarships are associated with this type.",
+        tags=['Scholarship Types']
+    ),
+)
 class ScholarshipTypeViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing ScholarshipType entities through REST API.
@@ -171,6 +220,140 @@ class ScholarshipTypeViewSet(viewsets.ModelViewSet):
             )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List scholarships",
+        description="Retrieve a paginated list of all scholarships with comprehensive filtering, search, and ordering capabilities.",
+        parameters=[
+            OpenApiParameter(
+                name='type',
+                type=OpenApiTypes.INT,
+                description='Filter by scholarship type ID'
+            ),
+            OpenApiParameter(
+                name='campus',
+                type=OpenApiTypes.INT,
+                description='Filter by campus ID'
+            ),
+            OpenApiParameter(
+                name='supervisor',
+                type=OpenApiTypes.INT,
+                description='Filter by supervisor (Person) ID'
+            ),
+            OpenApiParameter(
+                name='student',
+                type=OpenApiTypes.INT,
+                description='Filter by student (Person) ID'
+            ),
+            OpenApiParameter(
+                name='sponsor',
+                type=OpenApiTypes.INT,
+                description='Filter by sponsor (Organization) ID'
+            ),
+            OpenApiParameter(
+                name='initiative',
+                type=OpenApiTypes.INT,
+                description='Filter by initiative ID'
+            ),
+            OpenApiParameter(
+                name='is_active',
+                type=OpenApiTypes.BOOL,
+                description='Filter by active status (currently ongoing scholarships)'
+            ),
+            OpenApiParameter(
+                name='start_date_after',
+                type=OpenApiTypes.DATE,
+                description='Filter scholarships starting after this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='start_date_before',
+                type=OpenApiTypes.DATE,
+                description='Filter scholarships starting before this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='end_date_after',
+                type=OpenApiTypes.DATE,
+                description='Filter scholarships ending after this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='end_date_before',
+                type=OpenApiTypes.DATE,
+                description='Filter scholarships ending before this date (YYYY-MM-DD)'
+            ),
+            OpenApiParameter(
+                name='value_min',
+                type=OpenApiTypes.DECIMAL,
+                description='Filter scholarships with minimum monthly value'
+            ),
+            OpenApiParameter(
+                name='value_max',
+                type=OpenApiTypes.DECIMAL,
+                description='Filter scholarships with maximum monthly value'
+            ),
+            OpenApiParameter(
+                name='search',
+                type=OpenApiTypes.STR,
+                description='Search by title, student name, supervisor name, or sponsor name'
+            ),
+            OpenApiParameter(
+                name='ordering',
+                type=OpenApiTypes.STR,
+                description='Order by: start_date, end_date, value, student__name, supervisor__name, created_at, updated_at (prefix with - for descending)'
+            ),
+        ],
+        tags=['Scholarships']
+    ),
+    create=extend_schema(
+        summary="Create scholarship",
+        description="Create a new scholarship with all required information including type, dates, people, and funding details.",
+        request=ScholarshipCreateUpdateSerializer,
+        responses={201: ScholarshipSerializer},
+        examples=[
+            OpenApiExample(
+                'Create Scholarship Example',
+                value={
+                    'title': 'Research Scholarship - Machine Learning',
+                    'type': 1,
+                    'campus': 1,
+                    'start_date': '2024-01-01',
+                    'end_date': '2024-12-31',
+                    'supervisor': 5,
+                    'student': 10,
+                    'value': '1500.00',
+                    'sponsor': 2,
+                    'initiative': 3
+                },
+                request_only=True
+            )
+        ],
+        tags=['Scholarships']
+    ),
+    retrieve=extend_schema(
+        summary="Get scholarship details",
+        description="Retrieve detailed information about a specific scholarship including all related entities and computed properties.",
+        responses={200: ScholarshipDetailSerializer},
+        tags=['Scholarships']
+    ),
+    update=extend_schema(
+        summary="Update scholarship",
+        description="Update all fields of a scholarship with validation for dates, values, and relationships.",
+        request=ScholarshipCreateUpdateSerializer,
+        responses={200: ScholarshipSerializer},
+        tags=['Scholarships']
+    ),
+    partial_update=extend_schema(
+        summary="Partially update scholarship",
+        description="Update specific fields of a scholarship with validation.",
+        request=ScholarshipCreateUpdateSerializer,
+        responses={200: ScholarshipSerializer},
+        tags=['Scholarships']
+    ),
+    destroy=extend_schema(
+        summary="Delete scholarship",
+        description="Delete a scholarship record.",
+        tags=['Scholarships']
+    ),
+)
 class ScholarshipViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing Scholarship entities through REST API.
@@ -339,6 +522,72 @@ class ScholarshipViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
+    @extend_schema(
+        summary="Get scholarship statistics",
+        description="""
+        Retrieve aggregated statistics about scholarships including:
+        - Total scholarship count
+        - Active scholarship count
+        - Total monthly value across all scholarships
+        - Distribution by scholarship type
+        - Distribution by campus
+        - Top 10 supervisors by scholarship count
+        - Top 10 sponsors by scholarship count
+        
+        All filters applied to the list endpoint also apply to statistics.
+        """,
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'total_count': {'type': 'integer', 'description': 'Total number of scholarships'},
+                    'active_count': {'type': 'integer', 'description': 'Number of currently active scholarships'},
+                    'total_monthly_value': {'type': 'string', 'description': 'Sum of all scholarship monthly values'},
+                    'by_type': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'type__name': {'type': 'string'},
+                                'count': {'type': 'integer'}
+                            }
+                        }
+                    },
+                    'by_campus': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'campus__name': {'type': 'string'},
+                                'count': {'type': 'integer'}
+                            }
+                        }
+                    },
+                    'top_supervisors': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'supervisor__name': {'type': 'string'},
+                                'count': {'type': 'integer'}
+                            }
+                        }
+                    },
+                    'top_sponsors': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'sponsor__name': {'type': 'string'},
+                                'count': {'type': 'integer'}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        tags=['Scholarships']
+    )
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """

@@ -279,8 +279,22 @@ For a cleaner, read-only documentation experience:
 - **API Root:** http://localhost:8000/api/
 - **People API:** http://localhost:8000/api/people/
 - **Initiatives API:** http://localhost:8000/api/initiatives/
+- **Scholarships API:** http://localhost:8000/api/scholarships/
+- **Scholarship Types API:** http://localhost:8000/api/scholarship-types/
 - **JWT Token:** http://localhost:8000/api/token/
 - **JWT Refresh:** http://localhost:8000/api/token/refresh/
+
+### Domain-Specific API Documentation
+
+For detailed information about specific API domains:
+
+- **[Scholarship Management API](apps/scholarships/API_DOCUMENTATION.md)** - Complete guide to scholarship endpoints including:
+  - Scholarship CRUD operations
+  - Scholarship type management
+  - Advanced filtering and search
+  - Statistics and reporting
+  - Request/response examples
+  - Validation rules
 
 ## Documentation
 

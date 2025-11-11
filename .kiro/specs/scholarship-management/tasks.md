@@ -79,7 +79,7 @@
   - Add types: Research, Extension, Teaching, Innovation, Monitoring
   - _Requirements: 1.1_
 
-- [-] 9. Update API documentation
+- [x] 9. Update API documentation
   - Add scholarship endpoints to API schema
   - Update Swagger/ReDoc documentation
   - _Requirements: 6.1_

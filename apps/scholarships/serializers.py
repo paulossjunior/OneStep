@@ -5,6 +5,7 @@ from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
 from decimal import Decimal
 from datetime import date, timedelta
+from drf_spectacular.utils import extend_schema_field
 from apps.scholarships.models import ScholarshipType, Scholarship
 from apps.people.models import Person
 from apps.organizational_group.models import Organization, Campus
@@ -31,7 +32,8 @@ class ScholarshipTypeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'scholarship_count']
     
-    def get_scholarship_count(self, obj):
+    @extend_schema_field(serializers.IntegerField)
+    def get_scholarship_count(self, obj) -> int:
         """Get the count of scholarships for this type."""
         return obj.scholarship_count()
 
@@ -122,15 +124,18 @@ class ScholarshipSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
     
-    def get_duration_months(self, obj):
+    @extend_schema_field(serializers.IntegerField)
+    def get_duration_months(self, obj) -> int:
         """Get the duration in months."""
         return obj.duration_months()
     
-    def get_is_active(self, obj):
+    @extend_schema_field(serializers.BooleanField)
+    def get_is_active(self, obj) -> bool:
         """Check if scholarship is currently active."""
         return obj.is_active()
     
-    def get_total_value(self, obj):
+    @extend_schema_field(serializers.DecimalField(max_digits=12, decimal_places=2))
+    def get_total_value(self, obj) -> str:
         """Get the total scholarship value."""
         return str(obj.total_value())
 
