@@ -15,7 +15,7 @@ from apps.initiatives.models import Initiative
 class ScholarshipTypeHandler:
     """Handles ScholarshipType creation and retrieval."""
     
-    def get_or_create_type(self, name: str) -> Optional[ScholarshipType]:
+    def get_or_create_type(self, name: str) -> ScholarshipType:
         """
         Get or create a scholarship type by name.
         
@@ -23,10 +23,10 @@ class ScholarshipTypeHandler:
             name: Type name (e.g., "Pibic", "Pibic-Jr")
             
         Returns:
-            ScholarshipType instance or None
+            ScholarshipType instance (defaults to "Not Informed" if name is empty)
         """
         if not name or not name.strip():
-            return None
+            name = "Not Informed"
         
         # Normalize name
         normalized_name = name.strip().title()
@@ -148,7 +148,7 @@ class CampusHandler:
 class OrganizationHandler:
     """Handles Organization (Sponsor) creation and retrieval."""
     
-    def get_or_create_organization(self, name: str) -> Optional[Organization]:
+    def get_or_create_organization(self, name: str) -> Organization:
         """
         Get or create an organization by name.
         
@@ -156,10 +156,10 @@ class OrganizationHandler:
             name: Organization name
             
         Returns:
-            Organization instance or None
+            Organization instance (defaults to "Not Informed" if name is empty)
         """
         if not name or not name.strip():
-            return None
+            name = "Not Informed"
         
         # Normalize name
         normalized_name = name.strip().title()

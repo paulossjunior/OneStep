@@ -82,10 +82,9 @@ class ScholarshipImportProcessor:
                 # Parse value
                 value = self.validator.parse_value(row['Valor'])
                 
-                # Get or create scholarship type
-                scholarship_type = None
-                if row.get('Programa'):
-                    scholarship_type = self.type_handler.get_or_create_type(row['Programa'])
+                # Get or create scholarship type (defaults to "Not Informed" if blank)
+                programa = row.get('Programa', '').strip()
+                scholarship_type = self.type_handler.get_or_create_type(programa)
                 
                 # Get or create campus
                 campus = self.campus_handler.get_or_create_campus(row['CampusExecucao'])
@@ -121,12 +120,9 @@ class ScholarshipImportProcessor:
                     )
                     return
                 
-                # Get or create sponsor
-                sponsor = None
-                if row.get('AgFinanciadora'):
-                    sponsor = self.organization_handler.get_or_create_organization(
-                        row['AgFinanciadora']
-                    )
+                # Get or create sponsor (defaults to "Not Informed" if blank)
+                ag_financiadora = row.get('AgFinanciadora', '').strip()
+                sponsor = self.organization_handler.get_or_create_organization(ag_financiadora)
                 
                 # Get initiative
                 initiative = None

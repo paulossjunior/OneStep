@@ -139,6 +139,20 @@ docker-clean: ## Remove all containers, volumes, and images
 	else \
 		echo "$(YELLOW)Cleanup cancelled$(NC)"; \
 	fi
+docker-makemigrations: ## Create new migrations
+	@echo "$(BLUE)Creating migrations...$(NC)"
+	docker-compose -f docker-compose.superset.yml exec web python manage.py makemigrations
+	@echo "$(GREEN)✓ Migrations created$(NC)"
+
+docker-migrate: ## Create new migrations
+	@echo "$(BLUE)Creating migrations...$(NC)"
+	docker-compose -f docker-compose.superset.yml exec web python manage.py migrate
+	@echo "$(GREEN)✓ Migrations created$(NC)"
+
+docker-createsuperuser: ## Create new migrations
+	@echo "$(BLUE)Creating migrations...$(NC)"
+	docker-compose -f docker-compose.superset.yml exec web python manage.py createsuperuser
+	@echo "$(GREEN)✓ Migrations created$(NC)"
 
 ##@ Superset Management
 
