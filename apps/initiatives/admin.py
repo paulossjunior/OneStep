@@ -246,7 +246,7 @@ class InitiativeAdmin(admin.ModelAdmin):
         }),
         ('Organizations', {
             'fields': ('demanding_partner', 'demanding_partner_display', 'partnerships', 'partnerships_count_display', 'external_groups_count_display', 'external_groups_list_display'),
-            'description': 'Organizational relationships: demanding partner organization, partnerships, and external research groups.'
+            'description': 'Organizational relationships: demanding partner organization, partnerships, and research groups.'
         }),
         ('Timeline', {
             'fields': ('start_date', 'end_date'),
@@ -715,12 +715,12 @@ class InitiativeAdmin(admin.ModelAdmin):
         
         if count > 0:
             return format_html(
-                '<strong>{}</strong> external group{}',
+                '<strong>{}</strong> research group{}',
                 count,
                 's' if count != 1 else ''
             )
-        return format_html('<span style="color: #999;">No external groups</span>')
-    external_groups_count_display.short_description = 'External Groups'
+        return format_html('<span style="color: #999;">No research groups</span>')
+    external_groups_count_display.short_description = 'Research Groups'
     
     def external_groups_list_display(self, obj):
         """
@@ -745,8 +745,8 @@ class InitiativeAdmin(admin.ModelAdmin):
                     group.name
                 ))
             return format_html('<br>'.join(links))
-        return format_html('<span style="color: #999;">No external research groups</span>')
-    external_groups_list_display.short_description = 'External Research Groups'
+        return format_html('<span style="color: #999;">No research groups</span>')
+    external_groups_list_display.short_description = 'Research Groups'
     
     def hierarchy_level_display(self, obj):
         """

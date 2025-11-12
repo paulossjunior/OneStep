@@ -85,7 +85,7 @@ class GroupHandler:
         
         # Generate short_name from name if empty
         if not short_name or not short_name.strip():
-            short_name = self._generate_short_name(name)
+            short_name = self._generate_short_name(name, campus)
         else:
             short_name = short_name.strip()
         
@@ -93,9 +93,11 @@ class GroupHandler:
         research_type = self.get_or_create_research_type()
         organization = self.get_or_create_default_organization()
         
-        # Check for duplicate (short_name + organization combination)
+        # Check for duplicate (short_name + campus + organization combination)
+        # Allow same short_name on different campuses
         existing_group = OrganizationalGroup.objects.filter(
             short_name__iexact=short_name,
+            campus=campus,
             organization=organization
         ).first()
         
@@ -119,19 +121,59 @@ class GroupHandler:
         
         return group, True
     
-    def _generate_short_name(self, name: str) -> str:
+    def _generate_short_name(self, name: str, campus: Campus = None) -> str:
         """
-        Generate short_name from full name.
+        Generate short_name from full name by creating an acronym.
         
-        When short_name is not provided, defaults to "non-informed".
+        Creates an acronym from the first letters of each significant word,
+        optionally combined with campus code for uniqueness.
         
         Args:
             name: Full group name
+            campus: Optional Campus instance to append code
             
         Returns:
-            str: "non-informed" as default value
+            str: Generated short name (e.g., "ADSM" or "ADSM-VIT")
         """
-        return "non-informed"
+        if not name or not name.strip():
+            return "non-informed"
+        
+        # Words to ignore when creating acronym (common articles, prepositions, conjunctions)
+        ignore_words = {
+            'a', 'o', 'as', 'os', 'de', 'da', 'do', 'das', 'dos', 'em', 'no', 'na', 'nos', 'nas',
+            'e', 'ou', 'para', 'com', 'por', 'sobre', 'entre', 'sem', 'sob', 'ao', 'aos',
+            'the', 'of', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from'
+        }
+        
+        # Split name into words and filter
+        words = name.strip().split()
+        significant_words = [
+            word for word in words 
+            if word.lower() not in ignore_words and len(word) > 0
+        ]
+        
+        # If no significant words, use all words
+        if not significant_words:
+            significant_words = words
+        
+        # Create acronym from first letter of each significant word
+        acronym = ''.join(word[0].upper() for word in significant_words if word)
+        
+        # Limit acronym length to reasonable size (max 10 characters)
+        if len(acronym) > 10:
+            acronym = acronym[:10]
+        
+        # If acronym is too short (less than 2 chars), use first 2-4 chars of first word
+        if len(acronym) < 2 and significant_words:
+            first_word = significant_words[0].upper()
+            acronym = first_word[:min(4, len(first_word))]
+        
+        # Append campus code if provided for uniqueness
+        if campus and campus.code:
+            campus_code = campus.code.strip().upper()[:3]  # Max 3 chars from campus code
+            acronym = f"{acronym}-{campus_code}"
+        
+        return acronym
     
     def assign_leaders(
         self,

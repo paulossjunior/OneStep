@@ -122,7 +122,19 @@ class ResearchProjectImportProcessor:
             
             # Process organizational unit (GrupoPesquisa)
             if row.get('GrupoPesquisa'):
+                # First try to find existing unit
                 unit = self.group_handler.get_organizational_unit(row['GrupoPesquisa'])
+                
+                # If not found, create it using CampusExecucao
+                if not unit:
+                    campus_name = row.get('CampusExecucao', '').strip()
+                    ka = knowledge_area if row.get('AreaConhecimento') else None
+                    unit = self.group_handler.get_or_create_external_research_group(
+                        name=row['GrupoPesquisa'],
+                        knowledge_area=ka,
+                        campus_name=campus_name
+                    )
+                
                 if unit:
                     # Add initiative to unit's initiatives
                     unit.initiatives.add(initiative)
@@ -138,10 +150,15 @@ class ResearchProjectImportProcessor:
                     # Get knowledge area for the partnership (use initiative's knowledge area if available)
                     ka = knowledge_area if row.get('AreaConhecimento') else None
                     
+                    # Get campus from CampusExecucao
+                    campus_name = row.get('CampusExecucao', '').strip()
+                    
                     # Create or get partnership organizational unit
+                    # Uses CampusExecucao as campus and creates without leadership
                     partnership_unit = self.group_handler.get_or_create_external_research_group(
                         name=group_name,
-                        knowledge_area=ka
+                        knowledge_area=ka,
+                        campus_name=campus_name
                     )
                     
                     if partnership_unit:

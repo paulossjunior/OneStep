@@ -468,8 +468,8 @@ class OrganizationalUnit(TimestampedModel):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['short_name', 'organization'],
-                name='unique_short_name_organization'
+                fields=['short_name', 'organization', 'campus'],
+                name='unique_short_name_organization_campus'
             )
         ]
     

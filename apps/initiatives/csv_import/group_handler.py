@@ -70,13 +70,14 @@ class GroupHandler:
         
         return unit
     
-    def get_or_create_external_research_group(self, name: str, knowledge_area: Optional[KnowledgeArea] = None) -> Optional[OrganizationalUnit]:
+    def get_or_create_external_research_group(self, name: str, knowledge_area: Optional[KnowledgeArea] = None, campus_name: Optional[str] = None) -> Optional[OrganizationalUnit]:
         """
         Get or create an external research group (OrganizationalUnit).
         
         Args:
             name: External research group name
             knowledge_area: Optional knowledge area to associate
+            campus_name: Optional campus name from CampusExecucao (if not provided, uses default "External" campus)
             
         Returns:
             OrganizationalUnit: Existing or newly created unit, or None if name is empty
@@ -102,8 +103,8 @@ class GroupHandler:
             
             # Get or create default organization for external groups
             organization, _ = Organization.objects.get_or_create(
-                name='External Organizations',
-                defaults={'description': 'External research groups and organizations'}
+                name='Default Organization',
+                defaults={'description': 'Default organization for imported groups'}
             )
             
             # Get or create Research type
@@ -115,19 +116,36 @@ class GroupHandler:
                 }
             )
             
-            # Get or create default campus for external groups
-            campus, _ = Campus.objects.get_or_create(
-                code='EXTERNAL',
-                defaults={
-                    'name': 'External',
-                    'location': 'External organizations'
-                }
-            )
+            # Get or create campus
+            if campus_name and campus_name.strip():
+                # Use provided campus name from CampusExecucao
+                normalized_campus_name = self.normalize_name(campus_name)
+                campus = Campus.objects.filter(name__iexact=normalized_campus_name).first()
+                
+                if not campus:
+                    # Create campus if it doesn't exist
+                    campus_code = normalized_campus_name[:3].upper()
+                    campus, _ = Campus.objects.get_or_create(
+                        code=campus_code,
+                        defaults={
+                            'name': normalized_campus_name,
+                            'location': f'{normalized_campus_name} campus'
+                        }
+                    )
+            else:
+                # Use default campus for external groups
+                campus, _ = Campus.objects.get_or_create(
+                    code='EXTERNAL',
+                    defaults={
+                        'name': 'External',
+                        'location': 'External organizations'
+                    }
+                )
             
             # Generate short name from full name
             short_name = self.generate_short_name(normalized_name)
             
-            # Create the unit
+            # Create the unit without leadership
             unit = OrganizationalUnit(
                 name=normalized_name,
                 short_name=short_name,

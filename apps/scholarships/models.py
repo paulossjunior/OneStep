@@ -181,8 +181,8 @@ class Scholarship(TimestampedModel):
                 name='scholarship_end_date_after_start_date'
             ),
             CheckConstraint(
-                check=Q(value__gt=0),
-                name='scholarship_value_positive'
+                check=Q(value__gte=0),
+                name='scholarship_value_non_negative'
             ),
         ]
     
@@ -230,9 +230,9 @@ class Scholarship(TimestampedModel):
             if self.end_date > max_end_date:
                 errors['end_date'] = 'End date cannot be more than 10 years after start date.'
         
-        # Validate value is positive
-        if self.value is not None and self.value <= 0:
-            errors['value'] = 'Scholarship value must be greater than zero.'
+        # Validate value is non-negative
+        if self.value is not None and self.value < 0:
+            errors['value'] = 'Scholarship value cannot be negative.'
         
         # Validate that type is active when creating new scholarship
         if self.type_id and not self.pk:  # Only check on creation

@@ -1,0 +1,129 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div id="content-main">
+    <h1>{{ title }}</h1>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div>
+                <label for="csv_file" class="required">CSV File:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+                <p class="help">Select a CSV file to import scholarships.</p>
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="Import" class="default" name="_import">
+            <a href="{% url 'admin:scholarships_scholarship_changelist' %}" class="button cancel-link">Cancel</a>
+        </div>
+    </form>
+    
+    <div class="module" style="margin-top: 20px;">
+        <h2>CSV Format Requirements</h2>
+        <p>The CSV file must include the following columns (header row required):</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr style="background-color: #f8f8f8;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Column Name</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Required</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Description</th>
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Valor</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Monthly scholarship value (defaults to 0 if empty)</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">300,00 or 300.00 or blank</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Inicio</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Start date (DD-MM-YY format)</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">01-09-25</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Fim</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">End date (DD-MM-YY format)</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">31-08-26</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Orientador</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Supervisor name</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">João Silva</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>OrientadorEmail</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Supervisor email</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">joao@example.com</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Orientado</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Student name (the person receiving the scholarship)</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Maria Santos</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>OrientadoEmail</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Student email address</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">maria@example.com</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>CampusExecucao</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="color: red;">Yes</span></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Campus name</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Serra</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Programa</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Scholarship type/program</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Pibic, Pibic-Jr</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>TituloPT</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Scholarship title</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Research Project Title</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>TituloPJ</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Initiative/Project name</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">AI Research Initiative</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>AgFinanciadora</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">No</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">Funding agency/sponsor</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">CNPq, Fapes, Ifes</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h3 style="margin-top: 20px;">Important Notes:</h3>
+        <ul>
+            <li>The CSV file must be UTF-8 encoded</li>
+            <li>The first row must contain the column headers exactly as shown above</li>
+            <li>Dates must be in DD-MM-YY format (e.g., 01-09-25 for September 1, 2025)</li>
+            <li>Values can use comma or dot as decimal separator (e.g., 300,00 or 300.00)</li>
+            <li><strong>Orientado/OrientadoEmail</strong>: Represents the student (scholarship recipient) name and email</li>
+            <li><strong>Orientador/OrientadorEmail</strong>: Represents the supervisor (advisor) name and email</li>
+            <li>Duplicate scholarships (same student, start date, and supervisor) will be skipped</li>
+            <li>Campus, scholarship types, people (students and supervisors), and sponsors will be created automatically if they don't exist</li>
+            <li>Initiatives must exist beforehand (they will be looked up by name from TituloPJ)</li>
+            <li>Invalid rows will be skipped and reported in the results</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -77,12 +77,51 @@ The import process uses per-row transactions, meaning:
 - **Campus**: Case-insensitive name lookup
 - **KnowledgeArea**: Case-insensitive name lookup
 - **Person**: Case-insensitive email lookup
-- **OrganizationalGroup**: Skipped if same short_name + campus exists
+- **OrganizationalGroup**: Skipped if same `(short_name, campus, organization)` combination exists
+
+### Multiple Groups with Same Short Name
+
+The system allows multiple groups to have the same `short_name` as long as they are on **different campuses**. This is useful for multi-campus institutions where different campuses may independently use the same acronyms.
+
+**Example:**
+- NEEF at Cariacica campus ✓
+- NEEF at Serra campus ✓
+- Both can coexist
+
+The uniqueness constraint is: `(short_name, organization, campus)`
+
+## Automatic Short Name Generation
+
+When a group doesn't have a `Sigla` (short name) in the CSV, the system automatically generates one using an intelligent acronym-based approach:
+
+### Generation Algorithm
+
+1. **Extract significant words** - Filters out common articles, prepositions, and conjunctions (e.g., "de", "em", "para", "the", "of", "and")
+2. **Create acronym** - Takes the first letter of each significant word
+3. **Apply constraints** - Limits to 10 characters maximum, ensures at least 2 characters
+4. **Add campus code** - Appends campus code for uniqueness (e.g., "AC-COL", "BU-VIT")
+
+### Examples
+
+| Group Name | Campus | Generated Short Name |
+|------------|--------|---------------------|
+| Ambiente Construído | Colatina | AC-COL |
+| Análise e Desenvolvimento em Sistemas Mecânicos | Vitória | ADSM-VIT |
+| Biodiversidade Urbana | Vitória | BU-VIT |
+| Ciência e Tecnologia de Alimentos | Venda Nova | CTA-VEN |
+
+**Benefits:**
+- Meaningful acronyms derived from actual group names
+- Campus code ensures uniqueness across campuses
+- Consistent and predictable naming
+
+For detailed information, see [SHORT_NAME_GENERATION.md](SHORT_NAME_GENERATION.md).
 
 ## Notes
 
 - All imported groups have type "Research"
 - Campus codes are auto-generated from names
-- Short names are auto-generated if not provided
+- Short names are auto-generated if not provided (see Automatic Short Name Generation above)
 - Leader relationships are created with current date as start_date
 - The Site column is not imported (only repositorio is used for the URL field)
+- Groups with the same short_name can exist on different campuses

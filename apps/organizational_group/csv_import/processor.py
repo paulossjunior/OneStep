@@ -140,7 +140,7 @@ class ImportProcessor:
                     self.reporter.add_skip(
                         row_number,
                         group.name,
-                        f"Group with short_name '{group.short_name}' already exists on campus '{campus.name}'"
+                        f"Group '{group.name}' with short_name '{group.short_name}' already exists on campus '{campus.name}'"
                     )
                     return
                 
