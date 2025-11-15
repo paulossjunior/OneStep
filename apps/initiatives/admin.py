@@ -5,7 +5,7 @@ from django.urls import reverse, path
 from django.utils.safestring import mark_safe
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import Initiative, InitiativeType
+from .models import Initiative, InitiativeType, FailedInitiativeImport, InitiativeCoordinatorChange
 from apps.core.admin import admin_site
 from .csv_import.processor import ResearchProjectImportProcessor
 
@@ -181,6 +181,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     list_display = [
         'name_display',
         'type_display',
+        'campus_display',
         'coordinator_display',
         'demanding_partner_display',
         'knowledge_areas_display',
@@ -199,6 +200,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     
     list_filter = [
         'type',
+        'campus',
         'knowledge_areas',
         'demanding_partner',
         'start_date',
@@ -237,7 +239,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     # Form layout configuration
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'description', 'type'),
+            'fields': ('name', 'description', 'type', 'campus'),
             'description': 'Basic information about the initiative.'
         }),
         ('Knowledge Areas', {
@@ -305,7 +307,7 @@ class InitiativeAdmin(admin.ModelAdmin):
     
     def import_csv_view(self, request):
         """
-        Handle CSV import view.
+        Handle CSV import view - supports single CSV or bulk ZIP import.
         
         Args:
             request: HTTP request object
@@ -317,52 +319,114 @@ class InitiativeAdmin(admin.ModelAdmin):
             csv_file = request.FILES.get('csv_file')
             
             if not csv_file:
-                messages.error(request, 'Please select a CSV file to upload.')
+                messages.error(request, 'Please select a file to upload.')
                 return redirect('..')
             
-            # Validate file extension
-            if not csv_file.name.endswith('.csv'):
-                messages.error(request, 'Please upload a CSV file (.csv extension).')
-                return redirect('..')
+            # Check if bulk import (ZIP file)
+            is_bulk = csv_file.name.lower().endswith('.zip')
             
-            # Process CSV
-            processor = ResearchProjectImportProcessor()
-            reporter = processor.process_csv(csv_file)
-            
-            # Display success messages
-            if reporter.success_count > 0:
+            if is_bulk:
+                # Process bulk import
+                from apps.core.csv_import.bulk_handler import BulkImportHandler, BulkImportReporter
+                
+                bulk_handler = BulkImportHandler()
+                csv_files = bulk_handler.process_upload(csv_file)
+                
+                if bulk_handler.has_errors():
+                    for error in bulk_handler.get_errors():
+                        messages.error(request, error)
+                    return redirect('..')
+                
+                if not csv_files:
+                    messages.error(request, 'No CSV files found in the uploaded ZIP.')
+                    return redirect('..')
+                
+                # Process each CSV file
+                bulk_reporter = BulkImportReporter()
+                processor = ResearchProjectImportProcessor()
+                
+                for csv_info in csv_files:
+                    file_reporter = processor.process_csv(csv_info['content'])
+                    bulk_reporter.add_file_result(csv_info['name'], file_reporter)
+                
+                # Display bulk summary
+                summary = bulk_reporter.get_summary()
+                
                 messages.success(
                     request,
-                    f'Successfully imported {reporter.success_count} research project(s).'
-                )
-            
-            # Display warning messages for skipped rows
-            if reporter.skip_count > 0:
-                messages.warning(
-                    request,
-                    f'Skipped {reporter.skip_count} duplicate project(s).'
-                )
-            
-            # Display error messages (limit to first 10)
-            if reporter.has_errors():
-                error_count = len(reporter.get_errors())
-                messages.error(
-                    request,
-                    f'Encountered {error_count} error(s) during import.'
+                    f"Bulk import completed: {summary['total_files']} file(s) processed"
                 )
                 
-                # Show first 10 errors
-                for error in reporter.get_errors()[:10]:
-                    messages.error(
+                if summary['total_successes'] > 0:
+                    messages.success(
                         request,
-                        f"Row {error['row']}: {error['message']}"
+                        f"Successfully imported {summary['total_successes']} research project(s)"
                     )
                 
-                if error_count > 10:
+                if summary['total_skips'] > 0:
                     messages.warning(
                         request,
-                        f'... and {error_count - 10} more error(s). Check logs for details.'
+                        f"Skipped {summary['total_skips']} duplicate project(s)"
                     )
+                
+                if summary['total_errors'] > 0:
+                    messages.error(
+                        request,
+                        f"Encountered {summary['total_errors']} error(s) during import"
+                    )
+                    
+                    # Show per-file error summary
+                    for file_result in summary['file_results']:
+                        if file_result['errors'] > 0:
+                            messages.warning(
+                                request,
+                                f"{file_result['filename']}: {file_result['errors']} error(s)"
+                            )
+                
+            else:
+                # Single CSV import
+                if not csv_file.name.endswith('.csv'):
+                    messages.error(request, 'Please upload a CSV file (.csv) or ZIP archive (.zip).')
+                    return redirect('..')
+                
+                # Process CSV
+                processor = ResearchProjectImportProcessor()
+                reporter = processor.process_csv(csv_file)
+                
+                # Display success messages
+                if reporter.success_count > 0:
+                    messages.success(
+                        request,
+                        f'Successfully imported {reporter.success_count} research project(s).'
+                    )
+                
+                # Display warning messages for skipped rows
+                if reporter.skip_count > 0:
+                    messages.warning(
+                        request,
+                        f'Skipped {reporter.skip_count} duplicate project(s).'
+                    )
+                
+                # Display error messages (limit to first 10)
+                if reporter.has_errors():
+                    error_count = len(reporter.get_errors())
+                    messages.error(
+                        request,
+                        f'Encountered {error_count} error(s) during import.'
+                    )
+                    
+                    # Show first 10 errors
+                    for error in reporter.get_errors()[:10]:
+                        messages.error(
+                            request,
+                            f"Row {error['row']}: {error['message']}"
+                        )
+                    
+                    if error_count > 10:
+                        messages.warning(
+                            request,
+                            f'... and {error_count - 10} more error(s). Check logs for details.'
+                        )
             
             return redirect('..')
         
@@ -392,7 +456,8 @@ class InitiativeAdmin(admin.ModelAdmin):
         queryset = queryset.select_related(
             'coordinator',
             'parent',
-            'type'
+            'type',
+            'campus'
         ).prefetch_related(
             'team_members',
             'students',
@@ -460,6 +525,27 @@ class InitiativeAdmin(admin.ModelAdmin):
         )
     type_display.short_description = 'Type'
     type_display.admin_order_field = 'type__name'
+    
+    def campus_display(self, obj):
+        """
+        Display campus with link to campus admin.
+        
+        Args:
+            obj (Initiative): Initiative instance
+            
+        Returns:
+            str: HTML formatted campus with link
+        """
+        if obj.campus:
+            url = reverse('admin:organizational_group_campus_change', args=[obj.campus.pk])
+            return format_html(
+                '<a href="{}" title="View campus">{}</a>',
+                url,
+                obj.campus.name
+            )
+        return format_html('<span style="color: #999;">No campus</span>')
+    campus_display.short_description = 'Campus'
+    campus_display.admin_order_field = 'campus__name'
     
     def coordinator_display(self, obj):
         """
@@ -1065,3 +1151,282 @@ class InitiativeAdmin(admin.ModelAdmin):
 # Register with custom admin site
 admin_site.register(Initiative, InitiativeAdmin)
 admin_site.register(InitiativeType, InitiativeTypeAdmin)
+
+
+
+@admin.register(FailedInitiativeImport)
+class FailedInitiativeImportAdmin(admin.ModelAdmin):
+    """
+    Django Admin configuration for FailedInitiativeImport model.
+    
+    Provides interface for viewing and managing failed CSV imports.
+    """
+    
+    list_display = [
+        'row_number',
+        'title_display',
+        'coordinator_display',
+        'campus_display',
+        'error_reason_short',
+        'import_date',
+        'resolved_display'
+    ]
+    
+    list_filter = [
+        'resolved',
+        'import_date',
+    ]
+    
+    search_fields = [
+        'error_reason',
+        'raw_data',
+        'resolution_notes'
+    ]
+    
+    readonly_fields = [
+        'row_number',
+        'error_reason',
+        'raw_data_display',
+        'import_date',
+        'title_display',
+        'coordinator_display',
+        'coordinator_email_display',
+        'start_date_display',
+        'end_date_display',
+        'campus_display'
+    ]
+    
+    fieldsets = (
+        ('Import Information', {
+            'fields': ('row_number', 'import_date', 'error_reason')
+        }),
+        ('CSV Data', {
+            'fields': (
+                'title_display',
+                'coordinator_display',
+                'coordinator_email_display',
+                'start_date_display',
+                'end_date_display',
+                'campus_display',
+                'raw_data_display'
+            ),
+            'description': 'Data from the failed CSV row'
+        }),
+        ('Resolution', {
+            'fields': ('resolved', 'resolution_notes'),
+            'description': 'Mark as resolved once the issue is fixed'
+        })
+    )
+    
+    list_per_page = 50
+    ordering = ['-import_date', 'row_number']
+    
+    actions = ['mark_as_resolved', 'mark_as_unresolved']
+    
+    def title_display(self, obj):
+        """Display the initiative title from raw data."""
+        return obj.get_title()
+    title_display.short_description = 'Title'
+    
+    def coordinator_display(self, obj):
+        """Display the coordinator name from raw data."""
+        return obj.get_coordinator()
+    coordinator_display.short_description = 'Coordinator'
+    
+    def coordinator_email_display(self, obj):
+        """Display the coordinator email from raw data."""
+        return obj.get_coordinator_email()
+    coordinator_email_display.short_description = 'Coordinator Email'
+    
+    def start_date_display(self, obj):
+        """Display the start date from raw data."""
+        return obj.get_start_date()
+    start_date_display.short_description = 'Start Date'
+    
+    def end_date_display(self, obj):
+        """Display the end date from raw data."""
+        return obj.get_end_date()
+    end_date_display.short_description = 'End Date'
+    
+    def campus_display(self, obj):
+        """Display the campus from raw data."""
+        campus = obj.get_campus()
+        if campus and campus != 'Unknown':
+            return campus
+        return format_html('<span style="color: #999;">Not specified</span>')
+    campus_display.short_description = 'Campus'
+    
+    def error_reason_short(self, obj):
+        """Display shortened error reason."""
+        if len(obj.error_reason) > 100:
+            return format_html(
+                '<span title="{}">{}</span>',
+                obj.error_reason,
+                obj.error_reason[:100] + '...'
+            )
+        return obj.error_reason
+    error_reason_short.short_description = 'Error Reason'
+    
+    def resolved_display(self, obj):
+        """Display resolved status with color."""
+        if obj.resolved:
+            return format_html(
+                '<span style="color: #4CAF50; font-weight: bold;">✓ Resolved</span>'
+            )
+        return format_html(
+            '<span style="color: #FF9800; font-weight: bold;">✗ Unresolved</span>'
+        )
+    resolved_display.short_description = 'Status'
+    resolved_display.admin_order_field = 'resolved'
+    
+    def raw_data_display(self, obj):
+        """Display formatted raw data."""
+        formatted = obj.get_formatted_data()
+        return format_html(
+            '<pre style="background: #f5f5f5; padding: 10px; border: 1px solid #ddd; overflow-x: auto;">{}</pre>',
+            formatted
+        )
+    raw_data_display.short_description = 'Raw CSV Data'
+    
+    def mark_as_resolved(self, request, queryset):
+        """Mark selected failed imports as resolved."""
+        updated = queryset.update(resolved=True)
+        self.message_user(
+            request,
+            f'Successfully marked {updated} failed import(s) as resolved.',
+            messages.SUCCESS
+        )
+    mark_as_resolved.short_description = "Mark selected as resolved"
+    
+    def mark_as_unresolved(self, request, queryset):
+        """Mark selected failed imports as unresolved."""
+        updated = queryset.update(resolved=False)
+        self.message_user(
+            request,
+            f'Successfully marked {updated} failed import(s) as unresolved.',
+            messages.SUCCESS
+        )
+    mark_as_unresolved.short_description = "Mark selected as unresolved"
+    
+    def has_add_permission(self, request):
+        """Disable manual addition of failed imports."""
+        return False
+    
+    def get_queryset(self, request):
+        """Optimize queryset."""
+        return super().get_queryset(request)
+
+
+# Register with custom admin site
+admin_site.register(FailedInitiativeImport, FailedInitiativeImportAdmin)
+
+
+
+@admin.register(InitiativeCoordinatorChange)
+class InitiativeCoordinatorChangeAdmin(admin.ModelAdmin):
+    """
+    Django Admin configuration for InitiativeCoordinatorChange model.
+    
+    Provides interface for viewing coordinator change history.
+    """
+    
+    list_display = [
+        'initiative_display',
+        'previous_coordinator_display',
+        'new_coordinator_display',
+        'change_date',
+        'changed_by'
+    ]
+    
+    list_filter = [
+        'change_date',
+        'changed_by',
+    ]
+    
+    search_fields = [
+        'initiative__name',
+        'previous_coordinator__name',
+        'new_coordinator__name',
+        'change_reason',
+        'changed_by'
+    ]
+    
+    readonly_fields = [
+        'initiative',
+        'previous_coordinator',
+        'new_coordinator',
+        'change_date',
+        'change_reason',
+        'changed_by'
+    ]
+    
+    fieldsets = (
+        ('Change Information', {
+            'fields': ('initiative', 'change_date', 'changed_by')
+        }),
+        ('Coordinator Change', {
+            'fields': ('previous_coordinator', 'new_coordinator', 'change_reason')
+        })
+    )
+    
+    list_per_page = 50
+    ordering = ['-change_date']
+    
+    def initiative_display(self, obj):
+        """Display initiative with link."""
+        if obj.initiative:
+            url = reverse('admin:initiatives_initiative_change', args=[obj.initiative.pk])
+            return format_html(
+                '<a href="{}" title="View initiative">{}</a>',
+                url,
+                obj.initiative.name
+            )
+        return format_html('<span style="color: #999;">Unknown</span>')
+    initiative_display.short_description = 'Initiative'
+    initiative_display.admin_order_field = 'initiative__name'
+    
+    def previous_coordinator_display(self, obj):
+        """Display previous coordinator with link."""
+        if obj.previous_coordinator:
+            url = reverse('admin:people_person_change', args=[obj.previous_coordinator.pk])
+            return format_html(
+                '<a href="{}" title="View person">{}</a>',
+                url,
+                obj.previous_coordinator.full_name
+            )
+        return format_html('<span style="color: #999;">Unknown</span>')
+    previous_coordinator_display.short_description = 'Previous Coordinator'
+    previous_coordinator_display.admin_order_field = 'previous_coordinator__name'
+    
+    def new_coordinator_display(self, obj):
+        """Display new coordinator with link."""
+        if obj.new_coordinator:
+            url = reverse('admin:people_person_change', args=[obj.new_coordinator.pk])
+            return format_html(
+                '<a href="{}" title="View person">{}</a>',
+                url,
+                obj.new_coordinator.full_name
+            )
+        return format_html('<span style="color: #999;">Unknown</span>')
+    new_coordinator_display.short_description = 'New Coordinator'
+    new_coordinator_display.admin_order_field = 'new_coordinator__name'
+    
+    def has_add_permission(self, request):
+        """Disable manual addition of coordinator changes."""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Only superusers can delete coordinator change records."""
+        return request.user.is_superuser
+    
+    def get_queryset(self, request):
+        """Optimize queryset."""
+        return super().get_queryset(request).select_related(
+            'initiative',
+            'previous_coordinator',
+            'new_coordinator'
+        )
+
+
+# Register with custom admin site
+admin_site.register(InitiativeCoordinatorChange, InitiativeCoordinatorChangeAdmin)

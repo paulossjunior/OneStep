@@ -56,13 +56,14 @@
 <h1>Import Research Projects from CSV</h1>
 
 <div class="format-section">
-    <h2>Upload CSV File</h2>
+    <h2>Upload CSV File or Bulk ZIP</h2>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-row">
             <div>
-                <label for="csv_file">CSV File:</label>
-                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+                <label for="csv_file">CSV File or ZIP Archive:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv,.zip" required>
+                <p class="help">Upload a single CSV file or a ZIP archive containing multiple CSV files for bulk import.</p>
             </div>
         </div>
         <div class="submit-row">
@@ -142,23 +143,58 @@
                 <td>Students (semicolon-separated)</td>
                 <td>Carlos Souza; Julia Oliveira</td>
             </tr>
+            <tr>
+                <td><strong>CampusExecucao</strong></td>
+                <td>No</td>
+                <td>Campus where initiative is performed</td>
+                <td>Serra, Vitória, Cariacica</td>
+            </tr>
+            <tr>
+                <td><strong>AreaConhecimento</strong></td>
+                <td>No</td>
+                <td>Knowledge area</td>
+                <td>Computer Science, Engineering</td>
+            </tr>
+            <tr>
+                <td><strong>GrupoPesquisa</strong></td>
+                <td>No</td>
+                <td>Research group name</td>
+                <td>AI Research Lab</td>
+            </tr>
+            <tr>
+                <td><strong>GrupoPesquisaExterno</strong></td>
+                <td>No</td>
+                <td>External research groups (comma-separated)</td>
+                <td>MIT Lab, Stanford AI</td>
+            </tr>
+            <tr>
+                <td><strong>ParceiroDemandante</strong></td>
+                <td>No</td>
+                <td>Demanding partner organization</td>
+                <td>ArcelorMittal, Vale</td>
+            </tr>
         </tbody>
     </table>
     
     <h3>Important Notes</h3>
     <ul>
+        <li><strong>Bulk Import:</strong> Upload a ZIP file containing multiple CSV files to import them all at once. All CSV files in the ZIP will be processed sequentially.</li>
         <li><strong>Date Format:</strong> All dates must be in DD-MM-YY format (e.g., 01-08-22 for August 1, 2022)</li>
-        <li><strong>List Format:</strong> Multiple names must be separated by semicolons (;)</li>
-        <li><strong>Duplicate Detection:</strong> Projects with the same title and coordinator will be skipped</li>
+        <li><strong>List Format:</strong> Multiple names must be separated by semicolons (;) for people, commas (,) for external research groups</li>
+        <li><strong>Campus:</strong> If CampusExecucao is provided, the campus will be created automatically if it doesn't exist</li>
+        <li><strong>Duplicate Handling:</strong> If a project with the same title and coordinator already exists, the import will <strong>add new team members and students</strong> to the existing initiative instead of creating a duplicate</li>
+        <li><strong>Coordinator Changes:</strong> If a project exists with the same title but different coordinator, the coordinator will be updated and the change will be tracked</li>
         <li><strong>Person Deduplication:</strong> People are deduplicated by email (for coordinators) or name (for team members/students)</li>
         <li><strong>Placeholder Emails:</strong> Team members and students without emails will get placeholder emails (e.g., firstname.lastname@noemail.local)</li>
+        <li><strong>Auto-creation:</strong> Knowledge areas, campuses, research groups, and organizations are created automatically if they don't exist</li>
+        <li><strong>Failed Imports:</strong> Any rows that fail to import are saved in the "Failed Initiative Imports" section for review and resolution</li>
     </ul>
     
     <h3>Example CSV Content</h3>
     <div class="example-box">
-Titulo,Coordenador,EmailCoordenador,Inicio,Fim,Pesquisadores,Estudantes
-Machine Learning for Healthcare,João Silva,joao.silva@example.com,01-08-22,31-12-26,Maria Santos; Pedro Costa,Carlos Souza; Julia Oliveira
-Data Science Research,Ana Lima,ana.lima@example.com,01-09-23,31-08-25,Roberto Alves,
+Titulo,Coordenador,EmailCoordenador,Inicio,Fim,CampusExecucao,Pesquisadores,Estudantes,AreaConhecimento,GrupoPesquisa,GrupoPesquisaExterno,ParceiroDemandante
+Machine Learning for Healthcare,João Silva,joao.silva@example.com,01-08-22,31-12-26,Serra,Maria Santos; Pedro Costa,Carlos Souza; Julia Oliveira,Computer Science,AI Research Lab,MIT Lab,ArcelorMittal
+Data Science Research,Ana Lima,ana.lima@example.com,01-09-23,31-08-25,Vitória,Roberto Alves,,Engineering,Data Lab,,Vale
     </div>
 </div>
 

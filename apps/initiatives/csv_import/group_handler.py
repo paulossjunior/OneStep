@@ -303,6 +303,53 @@ class GroupHandler:
         # If single word, truncate
         return name[:20].upper()
     
+    def get_or_create_campus(self, campus_name: str) -> Optional['Campus']:
+        """
+        Get or create a Campus by name.
+        
+        Args:
+            campus_name: Campus name from CampusExecucao
+            
+        Returns:
+            Campus: Existing or newly created campus, or None if name is empty
+        """
+        if not campus_name or not campus_name.strip():
+            return None
+        
+        from apps.organizational_group.models import Campus
+        
+        # Normalize campus name
+        normalized_name = self.normalize_name(campus_name)
+        
+        # Try to find existing campus (case-insensitive)
+        campus = Campus.objects.filter(name__iexact=normalized_name).first()
+        
+        if campus:
+            return campus
+        
+        # Create new campus
+        try:
+            # Generate campus code from name (first 3 letters, uppercase)
+            campus_code = normalized_name[:3].upper()
+            
+            # Check if code already exists, if so, add number
+            base_code = campus_code
+            counter = 1
+            while Campus.objects.filter(code=campus_code).exists():
+                campus_code = f"{base_code}{counter}"
+                counter += 1
+            
+            campus = Campus.objects.create(
+                name=normalized_name,
+                code=campus_code,
+                location=f'{normalized_name} campus'
+            )
+            return campus
+            
+        except IntegrityError:
+            # Race condition - another process created it
+            return Campus.objects.filter(name__iexact=normalized_name).first()
+    
     def normalize_name(self, name: str) -> str:
         """
         Normalize name to Title Case.

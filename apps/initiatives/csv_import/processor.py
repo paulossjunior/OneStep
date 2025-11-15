@@ -11,6 +11,7 @@ from .person_handler import PersonHandler
 from .initiative_handler import InitiativeHandler
 from .group_handler import GroupHandler
 from .reporter import ImportReporter
+from apps.initiatives.models import FailedInitiativeImport
 
 
 class ResearchProjectImportProcessor:
@@ -25,6 +26,25 @@ class ResearchProjectImportProcessor:
         self.initiative_handler = InitiativeHandler()
         self.group_handler = GroupHandler()
         self.reporter = ImportReporter()
+    
+    def save_failed_import(self, row_number: int, error_reason: str, row_data: dict):
+        """
+        Save a failed import to the database.
+        
+        Args:
+            row_number: Row number in CSV
+            error_reason: Reason for failure
+            row_data: Raw CSV row data
+        """
+        try:
+            FailedInitiativeImport.objects.create(
+                row_number=row_number,
+                error_reason=error_reason,
+                raw_data=row_data
+            )
+        except Exception as e:
+            # If we can't save the failed import, just log it
+            print(f"Failed to save failed import record: {str(e)}")
     
     def process_csv(self, file_path) -> ImportReporter:
         """
@@ -66,6 +86,7 @@ class ResearchProjectImportProcessor:
             if not validation_result.is_valid:
                 error_msg = "; ".join(validation_result.errors)
                 self.reporter.add_error(row_number, error_msg, row)
+                self.save_failed_import(row_number, error_msg, row)
                 return
             
             # Parse dates
@@ -81,24 +102,29 @@ class ResearchProjectImportProcessor:
             except ValidationError as ve:
                 error_msg = f"Invalid coordinator email '{row['EmailCoordenador']}': {str(ve)}"
                 self.reporter.add_error(row_number, error_msg, row)
+                self.save_failed_import(row_number, error_msg, row)
                 return
             
-            # Create or skip initiative
-            initiative, is_duplicate = self.initiative_handler.create_or_skip_initiative(
+            # Get or create campus from CampusExecucao
+            campus = None
+            if row.get('CampusExecucao'):
+                campus = self.group_handler.get_or_create_campus(row['CampusExecucao'])
+            
+            # Create or get existing initiative
+            initiative, is_existing, coordinator_changed = self.initiative_handler.create_or_get_initiative(
                 name=row['Titulo'],
                 description=row.get('', ''),  # Description field if exists
                 start_date=start_date,
                 end_date=end_date,
-                coordinator=coordinator
+                coordinator=coordinator,
+                campus=campus
             )
             
-            if is_duplicate:
-                self.reporter.add_skip(
-                    row_number,
-                    row['Titulo'],
-                    f"Duplicate: same name and coordinator"
-                )
-                return
+            # Track if this is an update to existing initiative
+            if is_existing:
+                # Will add team members and students to existing initiative
+                # Coordinator may have been changed as well
+                pass
             
             # Process team members (Pesquisadores)
             if row.get('Pesquisadores'):
@@ -177,32 +203,41 @@ class ResearchProjectImportProcessor:
                     initiative.demanding_partner = demanding_partner
                     initiative.save()
             
-            self.reporter.add_success(row_number, row['Titulo'])
+            # Report success with appropriate message
+            if is_existing:
+                if coordinator_changed:
+                    self.reporter.add_success(
+                        row_number, 
+                        row['Titulo'],
+                        message="Updated existing initiative: coordinator changed and team members/students added"
+                    )
+                else:
+                    self.reporter.add_success(
+                        row_number, 
+                        row['Titulo'],
+                        message="Updated existing initiative with new team members/students"
+                    )
+            else:
+                self.reporter.add_success(row_number, row['Titulo'])
             
         except ValidationError as e:
             # Don't re-raise - just log the error and continue
             error_msg = str(e)
             if hasattr(e, 'message_dict'):
                 error_msg = '; '.join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
-            self.reporter.add_error(
-                row_number,
-                f"Validation error: {error_msg}",
-                row
-            )
+            full_error = f"Validation error: {error_msg}"
+            self.reporter.add_error(row_number, full_error, row)
+            self.save_failed_import(row_number, full_error, row)
             # Don't re-raise - transaction will rollback automatically
         
         except IntegrityError as e:
-            self.reporter.add_error(
-                row_number,
-                f"Database integrity error: {str(e)}",
-                row
-            )
+            error_msg = f"Database integrity error: {str(e)}"
+            self.reporter.add_error(row_number, error_msg, row)
+            self.save_failed_import(row_number, error_msg, row)
             # Don't re-raise - transaction will rollback automatically
         
         except Exception as e:
-            self.reporter.add_error(
-                row_number,
-                f"Unexpected error: {str(e)}",
-                row
-            )
+            error_msg = f"Unexpected error: {str(e)}"
+            self.reporter.add_error(row_number, error_msg, row)
+            self.save_failed_import(row_number, error_msg, row)
             # Don't re-raise - transaction will rollback automatically

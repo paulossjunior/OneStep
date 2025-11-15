@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from apps.core.models import TimestampedModel
+import json
 
 
 class InitiativeType(TimestampedModel):
@@ -118,6 +119,7 @@ class Initiative(TimestampedModel):
         end_date (DateField): Initiative end date (optional)
         parent (ForeignKey): Parent initiative for hierarchical structure
         coordinator (ForeignKey): Person who coordinates this initiative
+        campus (ForeignKey): Campus where this initiative is performed
         team_members (ManyToManyField): People who are team members
         students (ManyToManyField): Students participating in this initiative
     """
@@ -158,6 +160,14 @@ class Initiative(TimestampedModel):
         on_delete=models.PROTECT,
         related_name='coordinated_initiatives',
         help_text="Person who coordinates this initiative"
+    )
+    campus = models.ForeignKey(
+        'organizational_group.Campus',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='initiatives',
+        help_text="Campus where this initiative is performed"
     )
     team_members = models.ManyToManyField(
         'people.Person',
@@ -202,6 +212,7 @@ class Initiative(TimestampedModel):
             models.Index(fields=['start_date']),
             models.Index(fields=['coordinator']),
             models.Index(fields=['parent']),
+            models.Index(fields=['campus']),
         ]
         constraints = [
             models.CheckConstraint(
@@ -445,3 +456,302 @@ class Initiative(TimestampedModel):
             organizational_unit: OrganizationalUnit instance to remove
         """
         self.partnerships.remove(organizational_unit)
+
+
+class FailedInitiativeImport(TimestampedModel):
+    """
+    Model to store failed research project imports from CSV.
+    
+    Attributes:
+        row_number (IntegerField): Row number in the CSV file
+        error_reason (TextField): Reason why the import failed
+        raw_data (JSONField): Raw CSV row data
+        import_date (DateTimeField): When the import was attempted
+        resolved (BooleanField): Whether the issue has been resolved
+        resolution_notes (TextField): Notes about how the issue was resolved
+    """
+    
+    row_number = models.IntegerField(
+        help_text="Row number in the CSV file"
+    )
+    error_reason = models.TextField(
+        help_text="Reason why the import failed"
+    )
+    raw_data = models.JSONField(
+        help_text="Raw CSV row data as JSON"
+    )
+    import_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the import was attempted"
+    )
+    resolved = models.BooleanField(
+        default=False,
+        help_text="Whether the issue has been resolved"
+    )
+    resolution_notes = models.TextField(
+        blank=True,
+        help_text="Notes about how the issue was resolved"
+    )
+    
+    class Meta:
+        ordering = ['-import_date', 'row_number']
+        verbose_name = 'Failed Initiative Import'
+        verbose_name_plural = 'Failed Initiative Imports'
+        indexes = [
+            models.Index(fields=['import_date']),
+            models.Index(fields=['resolved']),
+            models.Index(fields=['row_number']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the FailedInitiativeImport.
+        
+        Returns:
+            str: Description of the failed import
+        """
+        title = self.raw_data.get('Titulo', 'Unknown')
+        return f"Row {self.row_number}: {title} - {self.error_reason[:50]}"
+    
+    def get_title(self):
+        """
+        Get the title from raw data.
+        
+        Returns:
+            str: Initiative title or 'Unknown'
+        """
+        return self.raw_data.get('Titulo', 'Unknown')
+    
+    def get_coordinator(self):
+        """
+        Get the coordinator name from raw data.
+        
+        Returns:
+            str: Coordinator name or 'Unknown'
+        """
+        return self.raw_data.get('Coordenador', 'Unknown')
+    
+    def get_coordinator_email(self):
+        """
+        Get the coordinator email from raw data.
+        
+        Returns:
+            str: Coordinator email or 'Unknown'
+        """
+        return self.raw_data.get('EmailCoordenador', 'Unknown')
+    
+    def get_start_date(self):
+        """
+        Get the start date from raw data.
+        
+        Returns:
+            str: Start date or 'Unknown'
+        """
+        return self.raw_data.get('Inicio', 'Unknown')
+    
+    def get_end_date(self):
+        """
+        Get the end date from raw data.
+        
+        Returns:
+            str: End date or 'Unknown'
+        """
+        return self.raw_data.get('Fim', 'Unknown')
+    
+    def get_campus(self):
+        """
+        Get the campus from raw data.
+        
+        Returns:
+            str: Campus name or 'Unknown'
+        """
+        return self.raw_data.get('CampusExecucao', 'Unknown')
+    
+    def mark_resolved(self, notes=''):
+        """
+        Mark this failed import as resolved.
+        
+        Args:
+            notes (str): Resolution notes
+        """
+        self.resolved = True
+        self.resolution_notes = notes
+        self.save()
+    
+    def get_formatted_data(self):
+        """
+        Get formatted raw data for display.
+        
+        Returns:
+            str: Formatted JSON string
+        """
+        return json.dumps(self.raw_data, indent=2, ensure_ascii=False)
+
+
+
+class InitiativeCoordinatorChange(TimestampedModel):
+    """
+    Model to track coordinator changes for initiatives.
+    
+    Attributes:
+        initiative (ForeignKey): The initiative that had a coordinator change
+        previous_coordinator (ForeignKey): The previous coordinator
+        new_coordinator (ForeignKey): The new coordinator
+        change_date (DateTimeField): When the change occurred
+        change_reason (TextField): Reason for the change (e.g., "CSV import update")
+        changed_by (CharField): Who/what made the change
+    """
+    
+    initiative = models.ForeignKey(
+        Initiative,
+        on_delete=models.CASCADE,
+        related_name='coordinator_changes',
+        help_text="Initiative that had a coordinator change"
+    )
+    previous_coordinator = models.ForeignKey(
+        'people.Person',
+        on_delete=models.PROTECT,
+        related_name='previous_coordinated_initiatives',
+        help_text="Previous coordinator"
+    )
+    new_coordinator = models.ForeignKey(
+        'people.Person',
+        on_delete=models.PROTECT,
+        related_name='new_coordinated_initiatives',
+        help_text="New coordinator"
+    )
+    change_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the change occurred"
+    )
+    change_reason = models.TextField(
+        help_text="Reason for the change"
+    )
+    changed_by = models.CharField(
+        max_length=200,
+        default='CSV Import',
+        help_text="Who or what made the change"
+    )
+    
+    class Meta:
+        ordering = ['-change_date']
+        verbose_name = 'Initiative Coordinator Change'
+        verbose_name_plural = 'Initiative Coordinator Changes'
+        indexes = [
+            models.Index(fields=['initiative']),
+            models.Index(fields=['change_date']),
+            models.Index(fields=['previous_coordinator']),
+            models.Index(fields=['new_coordinator']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the InitiativeCoordinatorChange.
+        
+        Returns:
+            str: Description of the coordinator change
+        """
+        return f"{self.initiative.name}: {self.previous_coordinator.full_name} → {self.new_coordinator.full_name}"
+    
+    def get_previous_coordinator_name(self):
+        """
+        Get the previous coordinator's name.
+        
+        Returns:
+            str: Previous coordinator's full name
+        """
+        return self.previous_coordinator.full_name if self.previous_coordinator else 'Unknown'
+    
+    def get_new_coordinator_name(self):
+        """
+        Get the new coordinator's name.
+        
+        Returns:
+            str: New coordinator's full name
+        """
+        return self.new_coordinator.full_name if self.new_coordinator else 'Unknown'
+
+
+
+class InitiativeCoordinatorChange(TimestampedModel):
+    """
+    Model to track coordinator changes for initiatives.
+    
+    Attributes:
+        initiative (ForeignKey): The initiative whose coordinator changed
+        previous_coordinator (ForeignKey): The previous coordinator
+        new_coordinator (ForeignKey): The new coordinator
+        change_date (DateTimeField): When the change occurred
+        change_reason (TextField): Reason for the change
+        changed_by (CharField): Who made the change (user or system)
+    """
+    
+    initiative = models.ForeignKey(
+        Initiative,
+        on_delete=models.CASCADE,
+        related_name='coordinator_changes',
+        help_text="The initiative whose coordinator changed"
+    )
+    previous_coordinator = models.ForeignKey(
+        'people.Person',
+        on_delete=models.PROTECT,
+        related_name='previous_coordinated_initiatives',
+        help_text="The previous coordinator"
+    )
+    new_coordinator = models.ForeignKey(
+        'people.Person',
+        on_delete=models.PROTECT,
+        related_name='newly_coordinated_initiatives',
+        help_text="The new coordinator"
+    )
+    change_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the change occurred"
+    )
+    change_reason = models.TextField(
+        blank=True,
+        help_text="Reason for the coordinator change"
+    )
+    changed_by = models.CharField(
+        max_length=200,
+        default='System',
+        help_text="Who made the change (username or 'CSV Import', 'System', etc.)"
+    )
+    
+    class Meta:
+        ordering = ['-change_date']
+        verbose_name = 'Initiative Coordinator Change'
+        verbose_name_plural = 'Initiative Coordinator Changes'
+        indexes = [
+            models.Index(fields=['initiative']),
+            models.Index(fields=['change_date']),
+            models.Index(fields=['previous_coordinator']),
+            models.Index(fields=['new_coordinator']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the InitiativeCoordinatorChange.
+        
+        Returns:
+            str: Description of the coordinator change
+        """
+        return f"{self.initiative.name}: {self.previous_coordinator.full_name} → {self.new_coordinator.full_name}"
+    
+    def get_previous_coordinator_name(self):
+        """
+        Get the previous coordinator's name.
+        
+        Returns:
+            str: Previous coordinator's full name
+        """
+        return self.previous_coordinator.full_name if self.previous_coordinator else 'Unknown'
+    
+    def get_new_coordinator_name(self):
+        """
+        Get the new coordinator's name.
+        
+        Returns:
+            str: New coordinator's full name
+        """
+        return self.new_coordinator.full_name if self.new_coordinator else 'Unknown'

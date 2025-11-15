@@ -4,7 +4,7 @@ Handler for Initiative creation and duplicate detection.
 
 from typing import Optional, Tuple
 from datetime import datetime
-from apps.initiatives.models import Initiative, InitiativeType
+from apps.initiatives.models import Initiative, InitiativeType, InitiativeCoordinatorChange
 from apps.people.models import Person
 
 
@@ -34,18 +34,20 @@ class InitiativeHandler:
             )
         return self._research_project_type
     
-    def create_or_skip_initiative(
+    def create_or_get_initiative(
         self,
         name: str,
         description: str,
         start_date: datetime,
         end_date: datetime,
-        coordinator: Person
-    ) -> Tuple[Optional[Initiative], bool]:
+        coordinator: Person,
+        campus=None
+    ) -> Tuple[Initiative, bool, bool]:
         """
-        Create Initiative or skip if duplicate exists.
+        Create Initiative or get existing if duplicate exists.
+        Also checks for coordinator changes.
         
-        Duplicate detection: same name + same coordinator
+        Duplicate detection: same name (different coordinator allowed)
         
         Args:
             name: Initiative name
@@ -53,16 +55,42 @@ class InitiativeHandler:
             start_date: Start date
             end_date: End date
             coordinator: Coordinator Person
+            campus: Campus where initiative is performed (optional)
             
         Returns:
-            Tuple of (Initiative or None, is_duplicate)
+            Tuple of (Initiative, is_existing, coordinator_changed)
+            - Initiative: The created or existing initiative
+            - is_existing: True if initiative already existed, False if newly created
+            - coordinator_changed: True if coordinator was changed, False otherwise
         """
         # Normalize name
         normalized_name = self.normalize_name(name)
         
-        # Check for duplicate
-        if self.is_duplicate(normalized_name, coordinator):
-            return None, True
+        # Check for existing initiative with same coordinator
+        existing_initiative = self.get_existing_initiative(normalized_name, coordinator)
+        if existing_initiative:
+            return existing_initiative, True, False
+        
+        # Check for existing initiative with different coordinator (by name only)
+        existing_with_different_coordinator = self.get_initiative_by_name(normalized_name)
+        if existing_with_different_coordinator:
+            # Coordinator has changed
+            previous_coordinator = existing_with_different_coordinator.coordinator
+            
+            # Track the coordinator change
+            InitiativeCoordinatorChange.objects.create(
+                initiative=existing_with_different_coordinator,
+                previous_coordinator=previous_coordinator,
+                new_coordinator=coordinator,
+                change_reason=f"CSV import detected coordinator change from {previous_coordinator.full_name} to {coordinator.full_name}",
+                changed_by='CSV Import'
+            )
+            
+            # Update the coordinator
+            existing_with_different_coordinator.coordinator = coordinator
+            existing_with_different_coordinator.save()
+            
+            return existing_with_different_coordinator, True, True
         
         # Get research project type
         project_type = self.get_research_project_type()
@@ -74,26 +102,39 @@ class InitiativeHandler:
             type=project_type,
             start_date=start_date.date() if start_date else None,
             end_date=end_date.date() if end_date else None,
-            coordinator=coordinator
+            coordinator=coordinator,
+            campus=campus
         )
         
-        return initiative, False
+        return initiative, False, False
     
-    def is_duplicate(self, name: str, coordinator: Person) -> bool:
+    def get_existing_initiative(self, name: str, coordinator: Person) -> Optional[Initiative]:
         """
-        Check if initiative is duplicate (same name + same coordinator).
+        Get existing initiative with same name and coordinator.
         
         Args:
             name: Initiative name (normalized)
             coordinator: Coordinator Person
             
         Returns:
-            bool: True if duplicate exists
+            Initiative: Existing initiative or None
         """
         return Initiative.objects.filter(
             name__iexact=name,
             coordinator=coordinator
-        ).exists()
+        ).first()
+    
+    def get_initiative_by_name(self, name: str) -> Optional[Initiative]:
+        """
+        Get existing initiative by name only (regardless of coordinator).
+        
+        Args:
+            name: Initiative name (normalized)
+            
+        Returns:
+            Initiative: Existing initiative or None
+        """
+        return Initiative.objects.filter(name__iexact=name).first()
     
     def normalize_name(self, name: str) -> str:
         """

@@ -300,63 +300,133 @@ class ScholarshipAdmin(admin.ModelAdmin):
         return custom_urls + urls
     
     def import_csv_view(self, request):
-        """Custom view for CSV import."""
+        """Custom view for CSV import - supports single CSV or bulk ZIP import."""
         if request.method == 'POST':
             csv_file = request.FILES.get('csv_file')
             
             if not csv_file:
-                messages.error(request, 'Please select a CSV file to upload.')
+                messages.error(request, 'Please select a file to upload.')
                 return HttpResponseRedirect(request.path)
             
-            if not csv_file.name.endswith('.csv'):
-                messages.error(request, 'File must be a CSV file (.csv extension).')
-                return HttpResponseRedirect(request.path)
+            # Check if bulk import (ZIP file)
+            is_bulk = csv_file.name.lower().endswith('.zip')
             
-            # Process the CSV file
-            try:
-                processor = ScholarshipImportProcessor()
-                reporter = processor.process_csv(csv_file)
-                
-                # Display success message
-                if reporter.success_count > 0:
+            if is_bulk:
+                # Process bulk import
+                try:
+                    from apps.core.csv_import.bulk_handler import BulkImportHandler, BulkImportReporter
+                    
+                    bulk_handler = BulkImportHandler()
+                    csv_files = bulk_handler.process_upload(csv_file)
+                    
+                    if bulk_handler.has_errors():
+                        for error in bulk_handler.get_errors():
+                            messages.error(request, error)
+                        return HttpResponseRedirect(request.path)
+                    
+                    if not csv_files:
+                        messages.error(request, 'No CSV files found in the uploaded ZIP.')
+                        return HttpResponseRedirect(request.path)
+                    
+                    # Process each CSV file
+                    bulk_reporter = BulkImportReporter()
+                    processor = ScholarshipImportProcessor()
+                    
+                    for csv_info in csv_files:
+                        file_reporter = processor.process_csv(csv_info['content'])
+                        bulk_reporter.add_file_result(csv_info['name'], file_reporter)
+                    
+                    # Display bulk summary
+                    summary = bulk_reporter.get_summary()
+                    
                     messages.success(
                         request,
-                        f'Successfully imported {reporter.success_count} scholarship(s).'
-                    )
-                
-                # Display skip message
-                if reporter.skip_count > 0:
-                    messages.warning(
-                        request,
-                        f'Skipped {reporter.skip_count} duplicate scholarship(s).'
-                    )
-                
-                # Display errors
-                if reporter.has_errors():
-                    messages.error(
-                        request,
-                        f'{reporter.error_count} error(s) occurred during import. See details below.'
+                        f"Bulk import completed: {summary['total_files']} file(s) processed"
                     )
                     
-                    # Show first 10 errors
-                    for error in reporter.get_errors()[:10]:
-                        messages.error(
+                    if summary['total_successes'] > 0:
+                        messages.success(
                             request,
-                            f'Row {error["row"]}: {error["message"]}'
+                            f"Successfully imported {summary['total_successes']} scholarship(s)"
                         )
                     
-                    if len(reporter.get_errors()) > 10:
+                    if summary['total_skips'] > 0:
                         messages.warning(
                             request,
-                            f'... and {len(reporter.get_errors()) - 10} more error(s).'
+                            f"Skipped {summary['total_skips']} duplicate scholarship(s)"
                         )
-                
-                # Redirect back to changelist
-                return HttpResponseRedirect('../')
+                    
+                    if summary['total_errors'] > 0:
+                        messages.error(
+                            request,
+                            f"Encountered {summary['total_errors']} error(s) during import"
+                        )
+                        
+                        # Show per-file error summary
+                        for file_result in summary['file_results']:
+                            if file_result['errors'] > 0:
+                                messages.warning(
+                                    request,
+                                    f"{file_result['filename']}: {file_result['errors']} error(s)"
+                                )
+                    
+                    return HttpResponseRedirect('../')
+                    
+                except Exception as e:
+                    messages.error(request, f'Error processing ZIP file: {str(e)}')
+                    return HttpResponseRedirect(request.path)
             
-            except Exception as e:
-                messages.error(request, f'Error processing CSV file: {str(e)}')
-                return HttpResponseRedirect(request.path)
+            else:
+                # Single CSV import
+                if not csv_file.name.endswith('.csv'):
+                    messages.error(request, 'File must be a CSV file (.csv) or ZIP archive (.zip).')
+                    return HttpResponseRedirect(request.path)
+                
+                # Process the CSV file
+                try:
+                    processor = ScholarshipImportProcessor()
+                    reporter = processor.process_csv(csv_file)
+                    
+                    # Display success message
+                    if reporter.success_count > 0:
+                        messages.success(
+                            request,
+                            f'Successfully imported {reporter.success_count} scholarship(s).'
+                        )
+                    
+                    # Display skip message
+                    if reporter.skip_count > 0:
+                        messages.warning(
+                            request,
+                            f'Skipped {reporter.skip_count} duplicate scholarship(s).'
+                        )
+                    
+                    # Display errors
+                    if reporter.has_errors():
+                        messages.error(
+                            request,
+                            f'{reporter.error_count} error(s) occurred during import. See details below.'
+                        )
+                        
+                        # Show first 10 errors
+                        for error in reporter.get_errors()[:10]:
+                            messages.error(
+                                request,
+                                f'Row {error["row"]}: {error["message"]}'
+                            )
+                        
+                        if len(reporter.get_errors()) > 10:
+                            messages.warning(
+                                request,
+                                f'... and {len(reporter.get_errors()) - 10} more error(s).'
+                            )
+                    
+                    # Redirect back to changelist
+                    return HttpResponseRedirect('../')
+                
+                except Exception as e:
+                    messages.error(request, f'Error processing CSV file: {str(e)}')
+                    return HttpResponseRedirect(request.path)
         
         # Show upload form
         context = {

@@ -10,9 +10,9 @@
         
         <div class="form-row">
             <div>
-                <label for="csv_file" class="required">CSV File:</label>
-                <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
-                <p class="help">Select a CSV file to import scholarships.</p>
+                <label for="csv_file" class="required">CSV File or ZIP Archive:</label>
+                <input type="file" name="csv_file" id="csv_file" accept=".csv,.zip" required>
+                <p class="help">Upload a single CSV file or a ZIP archive containing multiple CSV files for bulk import.</p>
             </div>
         </div>
         
@@ -113,6 +113,7 @@
         
         <h3 style="margin-top: 20px;">Important Notes:</h3>
         <ul>
+            <li><strong>Bulk Import:</strong> Upload a ZIP file containing multiple CSV files to import them all at once. All CSV files in the ZIP will be processed sequentially.</li>
             <li>The CSV file must be UTF-8 encoded</li>
             <li>The first row must contain the column headers exactly as shown above</li>
             <li>Dates must be in DD-MM-YY format (e.g., 01-09-25 for September 1, 2025)</li>

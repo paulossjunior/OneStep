@@ -19,19 +19,23 @@ class ImportReporter:
         self.skips = []
         self.errors = []
     
-    def add_success(self, row_number: int, project_name: str):
+    def add_success(self, row_number: int, project_name: str, message: str = None):
         """
         Record successful import.
         
         Args:
             row_number: Row number in CSV
             project_name: Name of imported project
+            message: Optional custom message (e.g., "Updated existing initiative")
         """
         self.success_count += 1
-        self.successes.append({
+        success_entry = {
             'row': row_number,
             'project': project_name
-        })
+        }
+        if message:
+            success_entry['message'] = message
+        self.successes.append(success_entry)
     
     def add_skip(self, row_number: int, project_name: str, reason: str):
         """
