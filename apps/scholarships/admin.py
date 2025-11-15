@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from django.db import models
-from .models import ScholarshipType, Scholarship
+from .models import ScholarshipType, Scholarship, FailedScholarshipImport
 from .csv_import import ScholarshipImportProcessor
 
 
@@ -441,3 +441,211 @@ class ScholarshipAdmin(admin.ModelAdmin):
             'admin/scholarships/import_csv.html',
             context
         )
+
+
+
+@admin.register(FailedScholarshipImport)
+class FailedScholarshipImportAdmin(admin.ModelAdmin):
+    """
+    Django Admin configuration for FailedScholarshipImport model.
+    
+    Provides interface for viewing and managing failed CSV imports.
+    """
+    
+    list_display = [
+        'row_number',
+        'student_display',
+        'supervisor_display',
+        'campus_display',
+        'error_reason_short',
+        'import_date',
+        'resolved_display'
+    ]
+    
+    list_filter = [
+        'resolved',
+        'import_date',
+    ]
+    
+    search_fields = [
+        'error_reason',
+        'raw_data',
+        'resolution_notes'
+    ]
+    
+    readonly_fields = [
+        'row_number',
+        'error_reason',
+        'raw_data_display',
+        'import_date',
+        'student_display',
+        'supervisor_display',
+        'student_email_display',
+        'supervisor_email_display',
+        'start_date_display',
+        'end_date_display',
+        'value_display',
+        'campus_display',
+        'initiative_display',
+        'type_display',
+        'sponsor_display'
+    ]
+    
+    fieldsets = (
+        ('Import Information', {
+            'fields': ('row_number', 'import_date', 'error_reason')
+        }),
+        ('CSV Data', {
+            'fields': (
+                'student_display',
+                'student_email_display',
+                'supervisor_display',
+                'supervisor_email_display',
+                'start_date_display',
+                'end_date_display',
+                'value_display',
+                'campus_display',
+                'initiative_display',
+                'type_display',
+                'sponsor_display',
+                'raw_data_display'
+            ),
+            'description': 'Data from the failed CSV row'
+        }),
+        ('Resolution', {
+            'fields': ('resolved', 'resolution_notes'),
+            'description': 'Mark as resolved once the issue is fixed'
+        })
+    )
+    
+    list_per_page = 50
+    ordering = ['-import_date', 'row_number']
+    
+    actions = ['mark_as_resolved', 'mark_as_unresolved']
+    
+    def student_display(self, obj):
+        """Display the student name from raw data."""
+        return obj.get_student_name()
+    student_display.short_description = 'Student'
+    
+    def supervisor_display(self, obj):
+        """Display the supervisor name from raw data."""
+        return obj.get_supervisor_name()
+    supervisor_display.short_description = 'Supervisor'
+    
+    def student_email_display(self, obj):
+        """Display the student email from raw data."""
+        return obj.get_student_email()
+    student_email_display.short_description = 'Student Email'
+    
+    def supervisor_email_display(self, obj):
+        """Display the supervisor email from raw data."""
+        return obj.get_supervisor_email()
+    supervisor_email_display.short_description = 'Supervisor Email'
+    
+    def start_date_display(self, obj):
+        """Display the start date from raw data."""
+        return obj.get_start_date()
+    start_date_display.short_description = 'Start Date'
+    
+    def end_date_display(self, obj):
+        """Display the end date from raw data."""
+        return obj.get_end_date()
+    end_date_display.short_description = 'End Date'
+    
+    def value_display(self, obj):
+        """Display the scholarship value from raw data."""
+        return obj.get_value()
+    value_display.short_description = 'Value'
+    
+    def campus_display(self, obj):
+        """Display the campus from raw data."""
+        campus = obj.get_campus()
+        if campus and campus != 'Unknown':
+            return campus
+        return format_html('<span style="color: #999;">Not specified</span>')
+    campus_display.short_description = 'Campus'
+    
+    def initiative_display(self, obj):
+        """Display the initiative from raw data."""
+        initiative = obj.get_initiative()
+        if initiative and initiative != 'Unknown':
+            return initiative
+        return format_html('<span style="color: #999;">Not specified</span>')
+    initiative_display.short_description = 'Initiative'
+    
+    def type_display(self, obj):
+        """Display the scholarship type from raw data."""
+        type_name = obj.get_type()
+        if type_name and type_name != 'Unknown':
+            return type_name
+        return format_html('<span style="color: #999;">Not specified</span>')
+    type_display.short_description = 'Type'
+    
+    def sponsor_display(self, obj):
+        """Display the sponsor from raw data."""
+        sponsor = obj.get_sponsor()
+        if sponsor and sponsor != 'Unknown':
+            return sponsor
+        return format_html('<span style="color: #999;">Not specified</span>')
+    sponsor_display.short_description = 'Sponsor'
+    
+    def error_reason_short(self, obj):
+        """Display shortened error reason."""
+        if len(obj.error_reason) > 100:
+            return format_html(
+                '<span title="{}">{}</span>',
+                obj.error_reason,
+                obj.error_reason[:100] + '...'
+            )
+        return obj.error_reason
+    error_reason_short.short_description = 'Error Reason'
+    
+    def resolved_display(self, obj):
+        """Display resolved status with color."""
+        if obj.resolved:
+            return format_html(
+                '<span style="color: #4CAF50; font-weight: bold;">✓ Resolved</span>'
+            )
+        return format_html(
+            '<span style="color: #FF9800; font-weight: bold;">✗ Unresolved</span>'
+        )
+    resolved_display.short_description = 'Status'
+    resolved_display.admin_order_field = 'resolved'
+    
+    def raw_data_display(self, obj):
+        """Display formatted raw data."""
+        formatted = obj.get_formatted_data()
+        return format_html(
+            '<pre style="background: #f5f5f5; padding: 10px; border: 1px solid #ddd; overflow-x: auto;">{}</pre>',
+            formatted
+        )
+    raw_data_display.short_description = 'Raw CSV Data'
+    
+    def mark_as_resolved(self, request, queryset):
+        """Mark selected failed imports as resolved."""
+        updated = queryset.update(resolved=True)
+        self.message_user(
+            request,
+            f'Successfully marked {updated} failed import(s) as resolved.',
+            messages.SUCCESS
+        )
+    mark_as_resolved.short_description = "Mark selected as resolved"
+    
+    def mark_as_unresolved(self, request, queryset):
+        """Mark selected failed imports as unresolved."""
+        updated = queryset.update(resolved=False)
+        self.message_user(
+            request,
+            f'Successfully marked {updated} failed import(s) as unresolved.',
+            messages.SUCCESS
+        )
+    mark_as_unresolved.short_description = "Mark selected as unresolved"
+    
+    def has_add_permission(self, request):
+        """Disable manual addition of failed imports."""
+        return False
+    
+    def get_queryset(self, request):
+        """Optimize queryset."""
+        return super().get_queryset(request)

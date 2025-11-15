@@ -333,3 +333,125 @@ class Scholarship(TimestampedModel):
         if self.value:
             return self.value * Decimal(months)
         return Decimal('0.00')
+
+
+
+class FailedScholarshipImport(TimestampedModel):
+    """
+    Model to store failed scholarship imports from CSV.
+    
+    Attributes:
+        row_number (IntegerField): Row number in the CSV file
+        error_reason (TextField): Reason why the import failed
+        raw_data (JSONField): Raw CSV row data
+        import_date (DateTimeField): When the import was attempted
+        resolved (BooleanField): Whether the issue has been resolved
+        resolution_notes (TextField): Notes about how the issue was resolved
+    """
+    
+    row_number = models.IntegerField(
+        help_text="Row number in the CSV file"
+    )
+    error_reason = models.TextField(
+        help_text="Reason why the import failed"
+    )
+    raw_data = models.JSONField(
+        help_text="Raw CSV row data as JSON"
+    )
+    import_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the import was attempted"
+    )
+    resolved = models.BooleanField(
+        default=False,
+        help_text="Whether the issue has been resolved"
+    )
+    resolution_notes = models.TextField(
+        blank=True,
+        help_text="Notes about how the issue was resolved"
+    )
+    
+    class Meta:
+        ordering = ['-import_date', 'row_number']
+        verbose_name = 'Failed Scholarship Import'
+        verbose_name_plural = 'Failed Scholarship Imports'
+        indexes = [
+            models.Index(fields=['import_date']),
+            models.Index(fields=['resolved']),
+            models.Index(fields=['row_number']),
+        ]
+    
+    def __str__(self):
+        """
+        String representation of the FailedScholarshipImport.
+        
+        Returns:
+            str: Description of the failed import
+        """
+        student = self.raw_data.get('Orientado', 'Unknown')
+        return f"Row {self.row_number}: {student} - {self.error_reason[:50]}"
+    
+    def get_student_name(self):
+        """Get the student name from raw data."""
+        return self.raw_data.get('Orientado', 'Unknown')
+    
+    def get_supervisor_name(self):
+        """Get the supervisor name from raw data."""
+        return self.raw_data.get('Orientador', 'Unknown')
+    
+    def get_student_email(self):
+        """Get the student email from raw data."""
+        return self.raw_data.get('OrientadoEmail', 'Unknown')
+    
+    def get_supervisor_email(self):
+        """Get the supervisor email from raw data."""
+        return self.raw_data.get('OrientadorEmail', 'Unknown')
+    
+    def get_start_date(self):
+        """Get the start date from raw data."""
+        return self.raw_data.get('Inicio', 'Unknown')
+    
+    def get_end_date(self):
+        """Get the end date from raw data."""
+        return self.raw_data.get('Fim', 'Unknown')
+    
+    def get_value(self):
+        """Get the scholarship value from raw data."""
+        return self.raw_data.get('Valor', 'Unknown')
+    
+    def get_campus(self):
+        """Get the campus from raw data."""
+        return self.raw_data.get('CampusExecucao', 'Unknown')
+    
+    def get_initiative(self):
+        """Get the initiative name from raw data."""
+        return self.raw_data.get('TituloPJ', 'Unknown')
+    
+    def get_type(self):
+        """Get the scholarship type from raw data."""
+        return self.raw_data.get('Programa', 'Unknown')
+    
+    def get_sponsor(self):
+        """Get the sponsor from raw data."""
+        return self.raw_data.get('AgFinanciadora', 'Unknown')
+    
+    def mark_resolved(self, notes=''):
+        """
+        Mark this failed import as resolved.
+        
+        Args:
+            notes (str): Resolution notes
+        """
+        self.resolved = True
+        self.resolution_notes = notes
+        self.save()
+    
+    def get_formatted_data(self):
+        """
+        Get formatted raw data for display.
+        
+        Returns:
+            str: Formatted JSON string
+        """
+        import json
+        return json.dumps(self.raw_data, indent=2, ensure_ascii=False)

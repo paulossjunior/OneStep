@@ -14,7 +14,7 @@ from .handlers import (
     OrganizationHandler,
     InitiativeHandler
 )
-from apps.scholarships.models import Scholarship
+from apps.scholarships.models import Scholarship, FailedScholarshipImport
 
 
 class ScholarshipImportProcessor:
@@ -31,6 +31,25 @@ class ScholarshipImportProcessor:
         self.campus_handler = CampusHandler()
         self.organization_handler = OrganizationHandler()
         self.initiative_handler = InitiativeHandler()
+    
+    def save_failed_import(self, row_number: int, error_reason: str, row_data: dict):
+        """
+        Save a failed import to the database.
+        
+        Args:
+            row_number: Row number in CSV
+            error_reason: Reason for failure
+            row_data: Raw CSV row data
+        """
+        try:
+            FailedScholarshipImport.objects.create(
+                row_number=row_number,
+                error_reason=error_reason,
+                raw_data=row_data
+            )
+        except Exception as e:
+            # If we can't save the failed import, just log it
+            print(f"Failed to save failed import record: {str(e)}")
     
     def process_csv(self, file_path):
         """
@@ -68,8 +87,9 @@ class ScholarshipImportProcessor:
         # Validate row
         validation_result = self.validator.validate_row(row)
         if not validation_result.is_valid:
-            for error in validation_result.errors:
-                self.reporter.add_error(row_number, error, row)
+            error_msg = "; ".join(validation_result.errors)
+            self.reporter.add_error(row_number, error_msg, row)
+            self.save_failed_import(row_number, error_msg, row)
             return
         
         # Process row with transaction
@@ -89,11 +109,9 @@ class ScholarshipImportProcessor:
                 # Get or create campus
                 campus = self.campus_handler.get_or_create_campus(row['CampusExecucao'])
                 if not campus:
-                    self.reporter.add_error(
-                        row_number,
-                        f"Could not create campus: {row['CampusExecucao']}",
-                        row
-                    )
+                    error_msg = f"Could not create campus: {row['CampusExecucao']}"
+                    self.reporter.add_error(row_number, error_msg, row)
+                    self.save_failed_import(row_number, error_msg, row)
                     return
                 
                 # Get or create supervisor
@@ -113,11 +131,9 @@ class ScholarshipImportProcessor:
                     )
                 
                 if not student:
-                    self.reporter.add_error(
-                        row_number,
-                        "Could not create student (Orientado)",
-                        row
-                    )
+                    error_msg = "Could not create student (Orientado)"
+                    self.reporter.add_error(row_number, error_msg, row)
+                    self.save_failed_import(row_number, error_msg, row)
                     return
                 
                 # Get or create sponsor (defaults to "Not Informed" if blank)
@@ -173,14 +189,10 @@ class ScholarshipImportProcessor:
                 
         except ValidationError as e:
             error_msg = "; ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
-            self.reporter.add_error(
-                row_number,
-                f"Validation error: {error_msg}",
-                row
-            )
+            full_error = f"Validation error: {error_msg}"
+            self.reporter.add_error(row_number, full_error, row)
+            self.save_failed_import(row_number, full_error, row)
         except Exception as e:
-            self.reporter.add_error(
-                row_number,
-                f"Unexpected error: {str(e)}",
-                row
-            )
+            error_msg = f"Unexpected error: {str(e)}"
+            self.reporter.add_error(row_number, error_msg, row)
+            self.save_failed_import(row_number, error_msg, row)
