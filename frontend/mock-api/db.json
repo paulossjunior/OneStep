@@ -1,0 +1,494 @@
+{
+  "initiatives": [
+    {
+      "id": 1,
+      "name": "Programa de Extensão Rural",
+      "description": "Programa voltado para o desenvolvimento rural sustentável com foco em agricultura familiar e tecnologias apropriadas.",
+      "type": "PROGRAM",
+      "start_date": "2024-01-15",
+      "end_date": "2025-12-31",
+      "coordinator": {
+        "id": 1,
+        "first_name": "Maria",
+        "last_name": "Silva",
+        "email": "maria.silva@example.com",
+        "full_name": "Maria Silva"
+      },
+      "parent": null,
+      "parent_id": null,
+      "team_members": [
+        {
+          "id": 2,
+          "first_name": "João",
+          "last_name": "Santos",
+          "email": "joao.santos@example.com",
+          "full_name": "João Santos"
+        },
+        {
+          "id": 3,
+          "first_name": "Ana",
+          "last_name": "Costa",
+          "email": "ana.costa@example.com",
+          "full_name": "Ana Costa"
+        }
+      ],
+      "students": [
+        {
+          "id": 10,
+          "first_name": "Pedro",
+          "last_name": "Oliveira",
+          "email": "pedro.oliveira@example.com",
+          "full_name": "Pedro Oliveira"
+        }
+      ],
+      "organizational_groups": [
+        {
+          "id": 1,
+          "name": "Grupo de Pesquisa em Agroecologia",
+          "short_name": "GPA",
+          "type": "RESEARCH"
+        }
+      ],
+      "created_at": "2024-01-10T10:00:00Z",
+      "updated_at": "2024-01-10T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Projeto de Capacitação em Tecnologias Digitais",
+      "description": "Projeto focado em capacitar agricultores no uso de tecnologias digitais para gestão da propriedade rural.",
+      "type": "PROJECT",
+      "start_date": "2024-03-01",
+      "end_date": "2024-11-30",
+      "coordinator": {
+        "id": 2,
+        "first_name": "João",
+        "last_name": "Santos",
+        "email": "joao.santos@example.com",
+        "full_name": "João Santos"
+      },
+      "parent": {
+        "id": 1,
+        "name": "Programa de Extensão Rural"
+      },
+      "parent_id": 1,
+      "team_members": [
+        {
+          "id": 3,
+          "first_name": "Ana",
+          "last_name": "Costa",
+          "email": "ana.costa@example.com",
+          "full_name": "Ana Costa"
+        }
+      ],
+      "students": [
+        {
+          "id": 11,
+          "first_name": "Lucas",
+          "last_name": "Ferreira",
+          "email": "lucas.ferreira@example.com",
+          "full_name": "Lucas Ferreira"
+        },
+        {
+          "id": 12,
+          "first_name": "Carla",
+          "last_name": "Mendes",
+          "email": "carla.mendes@example.com",
+          "full_name": "Carla Mendes"
+        }
+      ],
+      "organizational_groups": [
+        {
+          "id": 1,
+          "name": "Grupo de Pesquisa em Agroecologia",
+          "short_name": "GPA",
+          "type": "RESEARCH"
+        }
+      ],
+      "created_at": "2024-02-15T14:30:00Z",
+      "updated_at": "2024-02-15T14:30:00Z"
+    },
+    {
+      "id": 3,
+      "name": "Seminário de Inovação Agrícola",
+      "description": "Evento anual para apresentação de inovações tecnológicas no setor agrícola.",
+      "type": "EVENT",
+      "start_date": "2024-09-15",
+      "end_date": "2024-09-17",
+      "coordinator": {
+        "id": 4,
+        "first_name": "Carlos",
+        "last_name": "Rodrigues",
+        "email": "carlos.rodrigues@example.com",
+        "full_name": "Carlos Rodrigues"
+      },
+      "parent": null,
+      "parent_id": null,
+      "team_members": [
+        {
+          "id": 5,
+          "first_name": "Fernanda",
+          "last_name": "Lima",
+          "email": "fernanda.lima@example.com",
+          "full_name": "Fernanda Lima"
+        }
+      ],
+      "students": [],
+      "organizational_groups": [
+        {
+          "id": 2,
+          "name": "Centro de Inovação Tecnológica",
+          "short_name": "CIT",
+          "type": "EXTENSION"
+        }
+      ],
+      "created_at": "2024-06-01T09:00:00Z",
+      "updated_at": "2024-06-01T09:00:00Z"
+    },
+    {
+      "id": 4,
+      "name": "Programa de Pesquisa em Sustentabilidade",
+      "description": "Programa de pesquisa focado em práticas sustentáveis na agricultura e pecuária.",
+      "type": "PROGRAM",
+      "start_date": "2024-02-01",
+      "end_date": null,
+      "coordinator": {
+        "id": 6,
+        "first_name": "Patricia",
+        "last_name": "Almeida",
+        "email": "patricia.almeida@example.com",
+        "full_name": "Patricia Almeida"
+      },
+      "parent": null,
+      "parent_id": null,
+      "team_members": [
+        {
+          "id": 7,
+          "first_name": "Roberto",
+          "last_name": "Souza",
+          "email": "roberto.souza@example.com",
+          "full_name": "Roberto Souza"
+        },
+        {
+          "id": 8,
+          "first_name": "Juliana",
+          "last_name": "Martins",
+          "email": "juliana.martins@example.com",
+          "full_name": "Juliana Martins"
+        }
+      ],
+      "students": [
+        {
+          "id": 13,
+          "first_name": "Rafael",
+          "last_name": "Barbosa",
+          "email": "rafael.barbosa@example.com",
+          "full_name": "Rafael Barbosa"
+        }
+      ],
+      "organizational_groups": [
+        {
+          "id": 3,
+          "name": "Laboratório de Sustentabilidade",
+          "short_name": "LabSus",
+          "type": "RESEARCH"
+        }
+      ],
+      "created_at": "2024-01-20T11:00:00Z",
+      "updated_at": "2024-01-20T11:00:00Z"
+    },
+    {
+      "id": 5,
+      "name": "Projeto de Monitoramento Ambiental",
+      "description": "Projeto para monitoramento de indicadores ambientais em propriedades rurais.",
+      "type": "PROJECT",
+      "start_date": "2024-04-01",
+      "end_date": "2024-12-31",
+      "coordinator": {
+        "id": 7,
+        "first_name": "Roberto",
+        "last_name": "Souza",
+        "email": "roberto.souza@example.com",
+        "full_name": "Roberto Souza"
+      },
+      "parent": {
+        "id": 4,
+        "name": "Programa de Pesquisa em Sustentabilidade"
+      },
+      "parent_id": 4,
+      "team_members": [
+        {
+          "id": 8,
+          "first_name": "Juliana",
+          "last_name": "Martins",
+          "email": "juliana.martins@example.com",
+          "full_name": "Juliana Martins"
+        }
+      ],
+      "students": [
+        {
+          "id": 14,
+          "first_name": "Beatriz",
+          "last_name": "Cardoso",
+          "email": "beatriz.cardoso@example.com",
+          "full_name": "Beatriz Cardoso"
+        }
+      ],
+      "organizational_groups": [
+        {
+          "id": 3,
+          "name": "Laboratório de Sustentabilidade",
+          "short_name": "LabSus",
+          "type": "RESEARCH"
+        }
+      ],
+      "created_at": "2024-03-15T13:00:00Z",
+      "updated_at": "2024-03-15T13:00:00Z"
+    }
+  ],
+  "people": [
+    {
+      "id": 1,
+      "first_name": "Maria",
+      "last_name": "Silva",
+      "email": "maria.silva@example.com",
+      "phone": "+55 11 98765-4321",
+      "full_name": "Maria Silva"
+    },
+    {
+      "id": 2,
+      "first_name": "João",
+      "last_name": "Santos",
+      "email": "joao.santos@example.com",
+      "phone": "+55 11 98765-4322",
+      "full_name": "João Santos"
+    },
+    {
+      "id": 3,
+      "first_name": "Ana",
+      "last_name": "Costa",
+      "email": "ana.costa@example.com",
+      "phone": "+55 11 98765-4323",
+      "full_name": "Ana Costa"
+    },
+    {
+      "id": 4,
+      "first_name": "Carlos",
+      "last_name": "Rodrigues",
+      "email": "carlos.rodrigues@example.com",
+      "phone": "+55 11 98765-4324",
+      "full_name": "Carlos Rodrigues"
+    },
+    {
+      "id": 5,
+      "first_name": "Fernanda",
+      "last_name": "Lima",
+      "email": "fernanda.lima@example.com",
+      "phone": "+55 11 98765-4325",
+      "full_name": "Fernanda Lima"
+    },
+    {
+      "id": 6,
+      "first_name": "Patricia",
+      "last_name": "Almeida",
+      "email": "patricia.almeida@example.com",
+      "phone": "+55 11 98765-4326",
+      "full_name": "Patricia Almeida"
+    },
+    {
+      "id": 7,
+      "first_name": "Roberto",
+      "last_name": "Souza",
+      "email": "roberto.souza@example.com",
+      "phone": "+55 11 98765-4327",
+      "full_name": "Roberto Souza"
+    },
+    {
+      "id": 8,
+      "first_name": "Juliana",
+      "last_name": "Martins",
+      "email": "juliana.martins@example.com",
+      "phone": "+55 11 98765-4328",
+      "full_name": "Juliana Martins"
+    },
+    {
+      "id": 10,
+      "first_name": "Pedro",
+      "last_name": "Oliveira",
+      "email": "pedro.oliveira@example.com",
+      "phone": "+55 11 98765-4330",
+      "full_name": "Pedro Oliveira"
+    },
+    {
+      "id": 11,
+      "first_name": "Lucas",
+      "last_name": "Ferreira",
+      "email": "lucas.ferreira@example.com",
+      "phone": "+55 11 98765-4331",
+      "full_name": "Lucas Ferreira"
+    },
+    {
+      "id": 12,
+      "first_name": "Carla",
+      "last_name": "Mendes",
+      "email": "carla.mendes@example.com",
+      "phone": "+55 11 98765-4332",
+      "full_name": "Carla Mendes"
+    },
+    {
+      "id": 13,
+      "first_name": "Rafael",
+      "last_name": "Barbosa",
+      "email": "rafael.barbosa@example.com",
+      "phone": "+55 11 98765-4333",
+      "full_name": "Rafael Barbosa"
+    },
+    {
+      "id": 14,
+      "first_name": "Beatriz",
+      "last_name": "Cardoso",
+      "email": "beatriz.cardoso@example.com",
+      "phone": "+55 11 98765-4334",
+      "full_name": "Beatriz Cardoso"
+    }
+  ],
+  "organizational_groups": [
+    {
+      "id": 1,
+      "name": "Grupo de Pesquisa em Agroecologia",
+      "short_name": "GPA",
+      "type": "RESEARCH",
+      "url": "https://gpa.example.com",
+      "knowledge_area": "Ciências Agrárias"
+    },
+    {
+      "id": 2,
+      "name": "Centro de Inovação Tecnológica",
+      "short_name": "CIT",
+      "type": "EXTENSION",
+      "url": "https://cit.example.com",
+      "knowledge_area": "Tecnologia"
+    },
+    {
+      "id": 3,
+      "name": "Laboratório de Sustentabilidade",
+      "short_name": "LabSus",
+      "type": "RESEARCH",
+      "url": "https://labsus.example.com",
+      "knowledge_area": "Meio Ambiente"
+    }
+  ],
+  "failed_imports": [
+    {
+      "id": 1,
+      "file_name": "initiatives_import_2024.csv",
+      "row_number": 15,
+      "data": {
+        "name": "Projeto Teste",
+        "type": "INVALID_TYPE",
+        "coordinator_id": 999
+      },
+      "errors": {
+        "type": ["Invalid initiative type"],
+        "coordinator_id": ["Coordinator not found"]
+      },
+      "created_at": "2024-11-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "file_name": "initiatives_import_2024.csv",
+      "row_number": 23,
+      "data": {
+        "name": "",
+        "description": "Test description",
+        "start_date": "invalid-date"
+      },
+      "errors": {
+        "name": ["This field is required"],
+        "start_date": ["Invalid date format"]
+      },
+      "created_at": "2024-11-15T10:30:00Z"
+    }
+  ],
+  "coordinator_changes": [
+    {
+      "id": 1,
+      "initiative": {
+        "id": 2,
+        "name": "Projeto de Capacitação em Tecnologias Digitais"
+      },
+      "previous_coordinator": {
+        "id": 1,
+        "first_name": "Maria",
+        "last_name": "Silva",
+        "email": "maria.silva@example.com",
+        "full_name": "Maria Silva"
+      },
+      "new_coordinator": {
+        "id": 2,
+        "first_name": "João",
+        "last_name": "Santos",
+        "email": "joao.santos@example.com",
+        "full_name": "João Santos"
+      },
+      "changed_at": "2024-02-20T15:00:00Z",
+      "changed_by": {
+        "id": 1,
+        "first_name": "Maria",
+        "last_name": "Silva",
+        "email": "maria.silva@example.com",
+        "full_name": "Maria Silva"
+      },
+      "reason": "Transferência de responsabilidade"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin123",
+      "email": "admin@onestep.com",
+      "first_name": "Admin",
+      "last_name": "User",
+      "is_staff": true,
+      "is_superuser": true,
+      "permissions": [
+        "initiatives.add_initiative",
+        "initiatives.change_initiative",
+        "initiatives.delete_initiative",
+        "initiatives.view_initiative",
+        "scholarships.add_scholarship",
+        "scholarships.change_scholarship",
+        "scholarships.delete_scholarship",
+        "scholarships.view_scholarship"
+      ]
+    },
+    {
+      "id": 2,
+      "username": "maria.silva",
+      "password": "senha123",
+      "email": "maria.silva@example.com",
+      "first_name": "Maria",
+      "last_name": "Silva",
+      "is_staff": true,
+      "is_superuser": false,
+      "permissions": [
+        "initiatives.view_initiative",
+        "initiatives.add_initiative",
+        "initiatives.change_initiative"
+      ]
+    },
+    {
+      "id": 3,
+      "username": "joao.santos",
+      "password": "senha123",
+      "email": "joao.santos@example.com",
+      "first_name": "João",
+      "last_name": "Santos",
+      "is_staff": false,
+      "is_superuser": false,
+      "permissions": [
+        "initiatives.view_initiative"
+      ]
+    }
+  ]
+}

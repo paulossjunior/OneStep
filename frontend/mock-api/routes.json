@@ -1,0 +1,8 @@
+{
+  "/api/*": "/$1",
+  "/api/initiatives/:id/hierarchy": "/initiatives?parent_id=:id",
+  "/api/initiatives/:id/children": "/initiatives?parent_id=:id",
+  "/api/initiatives/:id/coordinator-changes": "/coordinator_changes?initiative.id=:id",
+  "/api/initiatives/failed-imports": "/failed_imports",
+  "/api/initiatives/statistics": "/statistics"
+}

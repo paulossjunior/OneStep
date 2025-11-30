@@ -1,0 +1,71 @@
+{
+  "common": {
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "filters": "Filtros",
+    "apply": "Aplicar",
+    "clear": "Limpar",
+    "clearAll": "Limpar Tudo",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "update": "Atualizar",
+    "view": "Visualizar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "loading": "Carregando...",
+    "noData": "Nenhum dado disponível",
+    "error": "Erro",
+    "success": "Sucesso",
+    "warning": "Aviso",
+    "info": "Informação",
+    "profile": "Perfil",
+    "settings": "Configurações",
+    "allRightsReserved": "Todos os direitos reservados",
+    "refresh": "Atualizar",
+    "export": "Exportar",
+    "import": "Importar",
+    "sortBy": "Ordenar por"
+  },
+  "auth": {
+    "login": "Entrar",
+    "logout": "Sair",
+    "username": "Usuário",
+    "password": "Senha",
+    "signIn": "Entrar",
+    "loginFailed": "Falha no login. Verifique suas credenciais."
+  },
+  "dashboard": {
+    "title": "Painel"
+  },
+  "initiatives": {
+    "title": "Iniciativas",
+    "create": "Criar Iniciativa",
+    "import": "Importar",
+    "searchPlaceholder": "Buscar iniciativas...",
+    "type": "Tipo",
+    "noInitiatives": "Nenhuma iniciativa encontrada",
+    "createFirst": "Crie sua primeira iniciativa",
+    "deleteTitle": "Excluir Iniciativa",
+    "deleteMessage": "Tem certeza que deseja excluir esta iniciativa? Esta ação não pode ser desfeita.",
+    "teamMembers": "Membros da Equipe",
+    "students": "Estudantes",
+    "startDateAfter": "Data de Início Após",
+    "endDateBefore": "Data de Término Antes",
+    "types": {
+      "PROGRAM": "Programa",
+      "PROJECT": "Projeto",
+      "EVENT": "Evento"
+    }
+  },
+  "validation": {
+    "required": "Este campo é obrigatório",
+    "email": "Por favor, insira um email válido",
+    "minLength": "O comprimento mínimo é {min} caracteres",
+    "maxLength": "O comprimento máximo é {max} caracteres"
+  }
+}

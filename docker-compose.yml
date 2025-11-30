@@ -1,101 +1,58 @@
-services:
-  # PostgreSQL Database Service
-  db:
-    image: postgres:15-alpine
-    container_name: onestep_db
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-onestep_dev}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      # PostgreSQL performance tuning (optional)
-      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
-      # Shared memory for PostgreSQL (improves performance)
-    shm_size: 128mb
-    volumes:
-      # Named volume for data persistence
-      - postgres_data:/var/lib/postgresql/data
-      # Optional: Mount initialization scripts
-      - ./docker/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
-    networks:
-      - onestep_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
+# OneStep Full Stack Docker Compose
+# This orchestrates both backend and frontend services
 
-  # Django Web Application Service
-  web:
+version: '3.8'
+
+services:
+  # Backend Django API
+  backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-      target: production
-    container_name: onestep_web
-    command: python manage.py runserver 0.0.0.0:8000
-    environment:
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-not-for-production}
-      - DEBUG=${DEBUG:-1}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
-      - DB_ENGINE=django.db.backends.postgresql
-      - POSTGRES_DB=${POSTGRES_DB:-onestep_dev}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - DB_HOST=db
-      - DB_PORT=5432
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
-      - ADMIN_SITE_HEADER=${ADMIN_SITE_HEADER:-OneStep Administration (Development)}
-      - ADMIN_SITE_TITLE=${ADMIN_SITE_TITLE:-OneStep Admin}
-      - ADMIN_INDEX_TITLE=${ADMIN_INDEX_TITLE:-Welcome to OneStep Administration}
-      - ADMIN_URL=${ADMIN_URL:-admin/}
-      # Static files configuration - directory where collectstatic gathers all static assets
-      - STATIC_ROOT=${STATIC_ROOT:-/app/staticfiles}
-      # Optional: Auto-create superuser on first run
-      - CREATE_SUPERUSER=${CREATE_SUPERUSER:-0}
-      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-}
-      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
-      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
-    volumes:
-      # Mount source code for hot-reload during development
-      - .:/app
-      # Named volumes for static and media files
-      # static_volume: Persists collected static files (Django Admin CSS/JS, Swagger UI assets)
-      # Populated by 'collectstatic' command in entrypoint.sh, survives container restarts
-      - static_volume:/app/staticfiles
-      # media_volume: Stores user-uploaded files
-      - media_volume:/app/media
-      # Exclude virtual environment from mount
-      - /app/venv
+    container_name: onestep-backend
     ports:
       - "8000:8000"
-    networks:
-      - onestep_network
+    volumes:
+      - ./backend:/app
+      - backend-static:/app/staticfiles
+      - backend-media:/app/media
+    env_file:
+      - ./backend/.env.dev
     depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/')\" || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
+      - db
+    command: python manage.py runserver 0.0.0.0:8000
 
-# Named volumes for data persistence
+  # Frontend Vue 3
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: onestep-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    command: npm run dev
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: onestep-db
+    environment:
+      POSTGRES_DB: onestep
+      POSTGRES_USER: onestep
+      POSTGRES_PASSWORD: onestep
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
-  # PostgreSQL database data
-  postgres_data:
-    driver: local
-  # Static files collected by Django's collectstatic command
-  # Contains Django Admin, REST Framework, and Swagger UI assets
-  static_volume:
-    driver: local
-  # User-uploaded media files
-  media_volume:
-    driver: local
-
-# Internal network for service communication
-networks:
-  onestep_network:
-    driver: bridge
+  postgres-data:
+  backend-static:
+  backend-media:
