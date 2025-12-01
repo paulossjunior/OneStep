@@ -1,9 +1,17 @@
 // Initiative Types
 
-export enum InitiativeType {
-  PROGRAM = 'PROGRAM',
-  PROJECT = 'PROJECT',
-  EVENT = 'EVENT',
+export interface InitiativeTypeOption {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+}
+
+export interface InitiativeType {
+  id: number;
+  code: string;
+  name: string;
 }
 
 export interface Person {
@@ -92,7 +100,7 @@ export interface FailedImport {
 
 export interface InitiativeFilters {
   search?: string;
-  type?: InitiativeType | '';
+  type_codes?: string[];
   coordinator_id?: number | null;
   parent_id?: number | null;
   organizational_group_id?: number | null;

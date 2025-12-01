@@ -29,7 +29,11 @@
     "refresh": "Atualizar",
     "export": "Exportar",
     "import": "Importar",
-    "sortBy": "Ordenar por"
+    "sortBy": "Ordenar por",
+    "add": "Adicionar"
+  },
+  "validation": {
+    "required": "Este campo é obrigatório"
   },
   "auth": {
     "login": "Entrar",
@@ -48,6 +52,95 @@
     "import": "Importar",
     "searchPlaceholder": "Buscar iniciativas...",
     "type": "Tipo",
+    "form": {
+      "createTitle": "Criar Nova Iniciativa",
+      "editTitle": "Editar Iniciativa",
+      "name": "Nome",
+      "description": "Descrição",
+      "type": "Tipo",
+      "parent": "Iniciativa Pai",
+      "startDate": "Data de Início",
+      "endDate": "Data de Término",
+      "coordinator": "Coordenador",
+      "teamMembers": "Membros da Equipe",
+      "students": "Estudantes",
+      "organizationalGroups": "Grupos Organizacionais"
+    },
+    "detail": {
+      "period": "Período",
+      "ongoing": "Em andamento",
+      "coordinator": "Coordenador",
+      "parent": "Iniciativa Pai",
+      "groups": "Grupos Organizacionais",
+      "created": "Criado",
+      "updated": "Atualizado",
+      "error": "Falha ao carregar detalhes da iniciativa"
+    },
+    "teamMembers": {
+      "title": "Membros da Equipe",
+      "add": "Adicionar Membro",
+      "addTitle": "Adicionar Membro da Equipe",
+      "selectPerson": "Selecionar Pessoa",
+      "empty": "Nenhum membro da equipe ainda"
+    },
+    "students": {
+      "title": "Estudantes",
+      "add": "Adicionar Estudante",
+      "addTitle": "Adicionar Estudante",
+      "selectPerson": "Selecionar Estudante",
+      "empty": "Nenhum estudante ainda"
+    },
+    "hierarchy": {
+      "title": "Hierarquia de Iniciativas",
+      "noData": "Nenhum dado de hierarquia disponível",
+      "error": "Falha ao carregar hierarquia"
+    },
+    "import": {
+      "title": "Importar Iniciativas",
+      "pageTitle": "Importar Iniciativas",
+      "selectCsv": "Selecionar Arquivo CSV",
+      "selectZip": "Selecionar Arquivo ZIP",
+      "csvInfo": "Envie um arquivo CSV com dados de iniciativas",
+      "zipInfo": "Envie um arquivo ZIP contendo CSV e anexos",
+      "upload": "Enviar",
+      "success": "Importação concluída com sucesso",
+      "error": "Falha na importação",
+      "created": "Criados: {count}",
+      "updated": "Atualizados: {count}",
+      "failed": "Falharam: {count}",
+      "noFile": "Por favor, selecione um arquivo",
+      "instructions": "Instruções",
+      "instructionsText": "Siga estes passos para importar iniciativas:",
+      "step1": "Baixe o modelo CSV",
+      "step2": "Preencha os dados das iniciativas",
+      "step3": "Envie o arquivo preenchido",
+      "downloadTemplate": "Baixar Modelo",
+      "viewFailed": "Ver Importações Falhadas"
+    },
+    "failedImports": {
+      "title": "Importações Falhadas",
+      "pageTitle": "Importações Falhadas",
+      "items": "itens",
+      "row": "Linha",
+      "data": "Dados",
+      "errors": "Erros",
+      "retry": "Tentar Novamente",
+      "empty": "Nenhuma importação falhada",
+      "error": "Falha ao carregar importações falhadas"
+    },
+    "coordinatorChanges": {
+      "title": "Histórico de Mudanças de Coordenador",
+      "previous": "Coordenador Anterior",
+      "new": "Novo Coordenador",
+      "changedBy": "Alterado por",
+      "reason": "Motivo",
+      "empty": "Nenhuma mudança de coordenador",
+      "error": "Falha ao carregar mudanças de coordenador"
+    },
+    "delete": {
+      "title": "Excluir Iniciativa",
+      "message": "Tem certeza que deseja excluir esta iniciativa? Esta ação não pode ser desfeita."
+    },
     "noInitiatives": "Nenhuma iniciativa encontrada",
     "createFirst": "Crie sua primeira iniciativa",
     "deleteTitle": "Excluir Iniciativa",

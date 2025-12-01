@@ -1,0 +1,87 @@
+# Docker Compose - Production Mode
+# Use: docker-compose -f docker-compose.prod.yml up
+# Or: docker-compose -f docker-compose.prod.yml --env-file .env.production up
+
+services:
+  # Backend Django API - Production
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: onestep-backend-prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend-static:/app/staticfiles
+      - backend-media:/app/media
+    env_file:
+      - ./backend/.env.production
+    environment:
+      - DEBUG=False
+      - DJANGO_SETTINGS_MODULE=config.settings
+    depends_on:
+      - db
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4
+    restart: unless-stopped
+    networks:
+      - onestep-network
+
+  # Frontend Vue 3 - Production Mode (Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: onestep-frontend-prod
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - onestep-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: onestep-db-prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-onestep}
+      POSTGRES_USER: ${POSTGRES_USER:-onestep}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onestep}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - onestep-network
+
+  # Nginx Reverse Proxy (Optional - for SSL/Load Balancing)
+  nginx:
+    image: nginx:alpine
+    container_name: onestep-nginx
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - onestep-network
+    profiles:
+      - with-ssl
+
+volumes:
+  postgres-data:
+  backend-static:
+  backend-media:
+
+networks:
+  onestep-network:
+    driver: bridge

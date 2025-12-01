@@ -51,6 +51,7 @@ THIRD_PARTY_APPS = [
     'django_filters',
     'corsheaders',
     'drf_spectacular',
+    'oauth2_provider',
 ]
 
 LOCAL_APPS = [
@@ -185,7 +186,7 @@ TESTING = 'test' in sys.argv
 # Django REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
@@ -227,6 +228,8 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

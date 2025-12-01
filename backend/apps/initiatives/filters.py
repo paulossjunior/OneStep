@@ -35,6 +35,16 @@ class InitiativeFilter(django_filters.FilterSet):
         help_text='Filter by initiative type code (program, project, event)'
     )
     
+    type_codes = django_filters.MultipleChoiceFilter(
+        field_name='type__code',
+        choices=[
+            ('program', 'Program'),
+            ('project', 'Project'),
+            ('event', 'Event'),
+        ],
+        help_text='Filter by multiple initiative type codes'
+    )
+    
     # Foreign key filters
     coordinator = django_filters.NumberFilter(
         field_name='coordinator__id',

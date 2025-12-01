@@ -123,4 +123,9 @@ export const initiativesApi = {
       completed: number;
     }>(`${BASE_URL}/statistics/`);
   },
+
+  // Get initiative types
+  getTypes() {
+    return apiClient.get<{ types: Array<{ id: number; code: string; name: string; description: string; is_active: boolean }> }>(`${BASE_URL}/types/`);
+  },
 };

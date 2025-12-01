@@ -1,7 +1,6 @@
-# OneStep Full Stack Docker Compose
-# This orchestrates both backend and frontend services
-
-version: '3.8'
+# Docker Compose - Development Mode
+# Use: docker-compose up
+# Or: docker-compose --env-file .env.development up
 
 services:
   # Backend Django API
@@ -9,7 +8,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: onestep-backend
+      target: development
+    container_name: onestep-backend-dev
     ports:
       - "8000:8000"
     volumes:
@@ -17,27 +17,39 @@ services:
       - backend-static:/app/staticfiles
       - backend-media:/app/media
     env_file:
-      - ./backend/.env.dev
+      - ./backend/.env
+    environment:
+      - DEBUG=True
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+    networks:
+      - onestep-network
 
-  # Frontend Vue 3
+  # Frontend Vue 3 - Development Mode
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: onestep-frontend
+      target: development
+    container_name: onestep-frontend-dev
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
+      - NODE_ENV=development
       - VITE_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
     depends_on:
       - backend
-    command: npm run dev
+    stdin_open: true
+    tty: true
+    networks:
+      - onestep-network
 
   # PostgreSQL Database
   db:
@@ -51,8 +63,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onestep -d onestep"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onestep-network
 
 volumes:
   postgres-data:
   backend-static:
   backend-media:
+
+networks:
+  onestep-network:
+    driver: bridge

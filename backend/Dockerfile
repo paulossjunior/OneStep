@@ -1,5 +1,44 @@
 # Multi-stage build for Django application
+
+# ============================================
+# Development Stage
+# ============================================
+FROM python:3.11-slim as development
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Make entrypoint executable
+RUN chmod +x /app/docker-entrypoint-dev.sh
+
+# Create directories with proper permissions
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
+    chmod 755 /app/staticfiles /app/media /app/logs
+
+EXPOSE 8000
+
+# Development command (can be overridden)
+CMD ["bash", "/app/docker-entrypoint-dev.sh"]
+
+# ============================================
 # Stage 1: Builder - Install dependencies
+# ============================================
 FROM python:3.11-slim as builder
 
 # Set environment variables for build optimization

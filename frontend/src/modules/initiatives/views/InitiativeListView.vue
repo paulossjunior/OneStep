@@ -58,10 +58,12 @@
           </v-col>
           <v-col cols="12" md="3">
             <v-select
-              v-model="filters.type"
+              v-model="filters.type_codes"
               :items="typeOptions"
               :label="$t('initiatives.type')"
               clearable
+              multiple
+              chips
               variant="outlined"
               density="compact"
             ></v-select>
@@ -194,9 +196,9 @@
 import { ref, reactive, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useInitiatives } from '../composables/useInitiatives';
+import { useInitiativeTypes } from '../composables/useInitiativeTypes';
 import { useDeleteInitiativeHandler, useSearchHandler, useExportHandler } from '../handlers/initiative.handlers';
-import { InitiativeType } from '../types/initiative.types';
-import type { Initiative } from '../types/initiative.types';
+import type { Initiative, InitiativeTypeOption } from '../types/initiative.types';
 import InitiativeCard from '../components/InitiativeCard.vue';
 import SearchBar from '@/core/components/SearchBar.vue';
 import LoadingSpinner from '@/core/components/LoadingSpinner.vue';
@@ -215,7 +217,7 @@ const { searchQuery, debouncedSearch, handleSearch: onSearch, clearSearch } = us
 // Filters
 const filters = reactive({
   search: '',
-  type: '' as InitiativeType | '',
+  type_codes: [] as string[],
   ordering: '-created_at',
   start_date_after: '',
   end_date_before: '',
@@ -236,6 +238,9 @@ const filtersRef = computed(() => ({
 
 const { items, total, isLoading, isError, queryError, refetch } = useInitiatives(filtersRef);
 
+// Fetch initiative types
+const { types: initiativeTypes } = useInitiativeTypes();
+
 // Delete handler
 const { handleDelete: deleteHandler, isDeleting } = useDeleteInitiativeHandler();
 const deleteDialog = ref();
@@ -244,12 +249,14 @@ const initiativeToDelete = ref<Initiative | null>(null);
 // Export handler
 const { handleExportCSV, isExporting } = useExportHandler();
 
-// Type options for filter
-const typeOptions = [
-  { title: 'Program', value: InitiativeType.PROGRAM },
-  { title: 'Project', value: InitiativeType.PROJECT },
-  { title: 'Event', value: InitiativeType.EVENT },
-];
+// Type options for filter (computed from backend data)
+const typeOptions = computed(() => {
+  if (!initiativeTypes.value) return [];
+  return initiativeTypes.value.map((type: InitiativeTypeOption) => ({
+    title: type.name,
+    value: type.code,
+  }));
+});
 
 // Ordering options
 const orderingOptions = [
@@ -264,7 +271,7 @@ const orderingOptions = [
 const hasActiveFilters = computed(() => {
   return (
     filters.search ||
-    filters.type ||
+    (filters.type_codes && filters.type_codes.length > 0) ||
     filters.start_date_after ||
     filters.end_date_before
   );
@@ -300,7 +307,7 @@ const confirmDelete = async () => {
 
 const handleClearFilters = () => {
   filters.search = '';
-  filters.type = '';
+  filters.type_codes = [];
   filters.start_date_after = '';
   filters.end_date_before = '';
   clearSearch();
@@ -324,7 +331,7 @@ watch(page, () => {
 
 // Watch filter changes and reset page
 watch(
-  () => [filters.type, filters.ordering, filters.start_date_after, filters.end_date_before],
+  () => [filters.type_codes, filters.ordering, filters.start_date_after, filters.end_date_before],
   () => {
     page.value = 1;
   }

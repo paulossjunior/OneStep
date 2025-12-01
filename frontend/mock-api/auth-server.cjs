@@ -244,6 +244,44 @@ server.use(jsonServer.rewriter({
   '/api/*': '/$1',
 }));
 
+// Middleware to transform list responses to Django pagination format
+server.use((req, res, next) => {
+  const originalSend = res.send;
+  
+  res.send = function(data) {
+    // Only transform GET requests to list endpoints (not detail endpoints)
+    if (req.method === 'GET' && !req.url.match(/\/\d+\/?$/)) {
+      try {
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        // If it's an array, transform to paginated response
+        if (Array.isArray(parsedData)) {
+          const page = parseInt(req.query.page || '1');
+          const pageSize = parseInt(req.query.page_size || '10');
+          const start = (page - 1) * pageSize;
+          const end = start + pageSize;
+          const paginatedData = parsedData.slice(start, end);
+          
+          const paginatedResponse = {
+            count: parsedData.length,
+            next: end < parsedData.length ? `${req.protocol}://${req.get('host')}${req.path}?page=${page + 1}&page_size=${pageSize}` : null,
+            previous: page > 1 ? `${req.protocol}://${req.get('host')}${req.path}?page=${page - 1}&page_size=${pageSize}` : null,
+            results: paginatedData
+          };
+          
+          return originalSend.call(this, JSON.stringify(paginatedResponse));
+        }
+      } catch (e) {
+        // If parsing fails, just send original data
+      }
+    }
+    
+    return originalSend.call(this, data);
+  };
+  
+  next();
+});
+
 // Use router for data endpoints
 server.use(router);
 

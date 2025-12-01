@@ -1,6 +1,0 @@
-Sigla,Nome,repositorio,Site,AreaConhecimento,Unidade,Lideres
-AI,Artificial Intelligence Lab,https://github.com/ai-lab,https://ai-lab.example.com,Computer Science,Main Campus,"John Doe (john.doe@example.com), Jane Smith (jane.smith@example.com)"
-BIO,Biology Research Group,https://github.com/bio-group,https://bio.example.com,Biology,North Campus,"Alice Johnson (alice.johnson@example.com)"
-CHEM,Chemistry Lab,https://github.com/chem-lab,,Chemistry,Main Campus,"Bob Wilson (bob.wilson@example.com)"
-PHYS,Physics Research Center,,,Physics,South Campus,"Carol Davis (carol.davis@example.com), David Brown (david.brown@example.com)"
-,Mathematics Study Group,https://github.com/math-group,,Mathematics,East Campus,"Eve Martinez (eve.martinez@example.com)"

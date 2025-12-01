@@ -29,7 +29,11 @@
     "refresh": "Refresh",
     "export": "Export",
     "import": "Import",
-    "sortBy": "Sort by"
+    "sortBy": "Sort by",
+    "add": "Add"
+  },
+  "validation": {
+    "required": "This field is required"
   },
   "auth": {
     "login": "Login",
@@ -48,6 +52,95 @@
     "import": "Import",
     "searchPlaceholder": "Search initiatives...",
     "type": "Type",
+    "form": {
+      "createTitle": "Create New Initiative",
+      "editTitle": "Edit Initiative",
+      "name": "Name",
+      "description": "Description",
+      "type": "Type",
+      "parent": "Parent Initiative",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "coordinator": "Coordinator",
+      "teamMembers": "Team Members",
+      "students": "Students",
+      "organizationalGroups": "Organizational Groups"
+    },
+    "detail": {
+      "period": "Period",
+      "ongoing": "Ongoing",
+      "coordinator": "Coordinator",
+      "parent": "Parent Initiative",
+      "groups": "Organizational Groups",
+      "created": "Created",
+      "updated": "Updated",
+      "error": "Failed to load initiative details"
+    },
+    "teamMembers": {
+      "title": "Team Members",
+      "add": "Add Member",
+      "addTitle": "Add Team Member",
+      "selectPerson": "Select Person",
+      "empty": "No team members yet"
+    },
+    "students": {
+      "title": "Students",
+      "add": "Add Student",
+      "addTitle": "Add Student",
+      "selectPerson": "Select Student",
+      "empty": "No students yet"
+    },
+    "hierarchy": {
+      "title": "Initiative Hierarchy",
+      "noData": "No hierarchy data available",
+      "error": "Failed to load hierarchy"
+    },
+    "import": {
+      "title": "Import Initiatives",
+      "pageTitle": "Import Initiatives",
+      "selectCsv": "Select CSV File",
+      "selectZip": "Select ZIP File",
+      "csvInfo": "Upload a CSV file with initiative data",
+      "zipInfo": "Upload a ZIP file containing CSV and attachments",
+      "upload": "Upload",
+      "success": "Import completed successfully",
+      "error": "Import failed",
+      "created": "Created: {count}",
+      "updated": "Updated: {count}",
+      "failed": "Failed: {count}",
+      "noFile": "Please select a file",
+      "instructions": "Instructions",
+      "instructionsText": "Follow these steps to import initiatives:",
+      "step1": "Download the CSV template",
+      "step2": "Fill in the initiative data",
+      "step3": "Upload the completed file",
+      "downloadTemplate": "Download Template",
+      "viewFailed": "View Failed Imports"
+    },
+    "failedImports": {
+      "title": "Failed Imports",
+      "pageTitle": "Failed Imports",
+      "items": "items",
+      "row": "Row",
+      "data": "Data",
+      "errors": "Errors",
+      "retry": "Retry",
+      "empty": "No failed imports",
+      "error": "Failed to load failed imports"
+    },
+    "coordinatorChanges": {
+      "title": "Coordinator Change History",
+      "previous": "Previous Coordinator",
+      "new": "New Coordinator",
+      "changedBy": "Changed by",
+      "reason": "Reason",
+      "empty": "No coordinator changes",
+      "error": "Failed to load coordinator changes"
+    },
+    "delete": {
+      "title": "Delete Initiative",
+      "message": "Are you sure you want to delete this initiative? This action cannot be undone."
+    },
     "noInitiatives": "No initiatives found",
     "createFirst": "Create your first initiative",
     "deleteTitle": "Delete Initiative",

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiClient from '@/core/api/client';
-import type { User, LoginCredentials, LoginResponse, AuthState } from '@/core/types/auth.types';
+import type { User, LoginCredentials } from '@/core/types/auth.types';
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -20,20 +20,32 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   async function login(credentials: LoginCredentials): Promise<void> {
     isLoading.value = true;
-    
+
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/login/', credentials);
-      const { access, refresh, user: userData } = response.data;
+      const formData = new FormData();
+      formData.append('grant_type', 'password');
+      formData.append('client_id', (import.meta as any).env.VITE_OAUTH_CLIENT_ID);
+      formData.append('username', credentials.username);
+      formData.append('password', credentials.password);
+
+      const response = await apiClient.post('/o/token/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const { access_token, refresh_token } = response.data;
 
       // Store tokens
-      accessToken.value = access;
-      refreshToken.value = refresh;
-      user.value = userData;
+      accessToken.value = access_token;
+      refreshToken.value = refresh_token;
 
       // Persist to localStorage
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+
+      // Fetch user data
+      await fetchCurrentUser();
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -71,13 +83,25 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await apiClient.post('/auth/token/refresh/', {
-        refresh: refreshToken.value,
+      const formData = new FormData();
+      formData.append('grant_type', 'refresh_token');
+      formData.append('client_id', (import.meta as any).env.VITE_OAUTH_CLIENT_ID);
+      formData.append('refresh_token', refreshToken.value);
+
+      const response = await apiClient.post('/o/token/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      const { access } = response.data;
-      accessToken.value = access;
-      localStorage.setItem('access_token', access);
+      const { access_token, refresh_token: new_refresh_token } = response.data;
+      accessToken.value = access_token;
+      localStorage.setItem('access_token', access_token);
+
+      if (new_refresh_token) {
+        refreshToken.value = new_refresh_token;
+        localStorage.setItem('refresh_token', new_refresh_token);
+      }
     } catch (error) {
       // Refresh failed - logout user
       await logout();
@@ -102,7 +126,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function initializeAuth(): void {
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedUser && accessToken.value) {
       try {
         user.value = JSON.parse(storedUser);

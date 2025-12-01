@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     # API endpoints
     path('api/', include('onestep.api_urls')),
+    path('api/o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
 ]
 
 # Serve media files during development

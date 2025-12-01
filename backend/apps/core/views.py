@@ -64,3 +64,15 @@ class IndexView(TemplateView):
             ]
         })
         return context
+
+
+from rest_framework import views, permissions, response
+from .serializers import UserSerializer
+
+class MeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def get(self, request):
+        serializer = self.serializer_class(request.user)
+        return response.Response(serializer.data)

@@ -1,0 +1,115 @@
+# Docker Compose - Simplified Development Mode
+# Use: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: onestep-db-dev
+    environment:
+      POSTGRES_DB: onestep
+      POSTGRES_USER: onestep
+      POSTGRES_PASSWORD: onestep
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onestep -d onestep"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onestep-network
+
+  # Backend Django API - Development
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: onestep-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend-static:/app/staticfiles
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dev-secret-key-not-for-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - DB_ENGINE=django.db.backends.postgresql
+      - POSTGRES_DB=onestep
+      - POSTGRES_USER=onestep
+      - POSTGRES_PASSWORD=onestep
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+      - CREATE_SUPERUSER=1
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@example.com
+      - DJANGO_SUPERUSER_PASSWORD=admin123
+      - OAUTH_CLIENT_ID=onestep-frontend-client
+      - OAUTH_CLIENT_SECRET=onestep-frontend-secret-dev
+      - OAUTH_REDIRECT_URIS=http://localhost:5173/auth/callback http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - bash
+      - -c
+      - |
+        echo '🚀 Starting OneStep Backend (Development)'
+        echo '=========================================='
+        sleep 5
+        echo '📦 Running migrations...'
+        python manage.py migrate --noinput
+        echo '✅ Migrations complete!'
+        echo '📦 Collecting static files...'
+        python manage.py collectstatic --noinput --clear
+        echo '✅ Static files collected!'
+        ls -la /app/staticfiles/ | head -10
+        echo '👤 Creating superuser...'
+        python create_superuser.py
+        echo '🔐 Creating OAuth Application...'
+        python create_oauth_application.py
+        echo '=========================================='
+        echo '✅ Initialization complete!'
+        echo '🌐 Starting Django development server...'
+        echo '=========================================='
+        python manage.py runserver 0.0.0.0:8000
+    networks:
+      - onestep-network
+
+  # Frontend Vue 3 - Development Mode
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: onestep-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+      - VITE_OAUTH_CLIENT_ID=onestep-frontend-client
+      - VITE_OAUTH_CLIENT_SECRET=onestep-frontend-secret-dev
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+    networks:
+      - onestep-network
+
+volumes:
+  postgres-data-dev:
+  backend-static:
+
+networks:
+  onestep-network:
+    driver: bridge

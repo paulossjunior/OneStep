@@ -21,6 +21,7 @@ from apps.people.views import PersonViewSet
 from apps.initiatives.views import InitiativeViewSet
 from apps.organizational_group.views import OrganizationalGroupViewSet, CampusViewSet
 from apps.scholarships.views import ScholarshipTypeViewSet, ScholarshipViewSet
+from apps.core.views import MeView
 
 
 # API Root view
@@ -75,6 +76,7 @@ v1_patterns = [
     path('', api_root, name='api-root'),
     
     # Authentication endpoints
+    path('auth/me/', MeView.as_view(), name='me'),
     path('auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),

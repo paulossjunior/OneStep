@@ -41,7 +41,7 @@ const routes: RouteRecordRaw[] = [
         },
       },
 
-      // Initiatives routes (will be added in Phase 2)
+      // Initiatives routes
       {
         path: 'initiatives',
         name: 'initiatives',
@@ -52,6 +52,75 @@ const routes: RouteRecordRaw[] = [
             { text: 'Dashboard', to: '/' },
             { text: 'Initiatives', disabled: true },
           ],
+        },
+      },
+      {
+        path: 'initiatives/create',
+        name: 'initiatives-create',
+        component: () => import('@/modules/initiatives/views/InitiativeCreateView.vue'),
+        meta: {
+          title: 'Create Initiative',
+          breadcrumbs: [
+            { text: 'Dashboard', to: '/' },
+            { text: 'Initiatives', to: '/initiatives' },
+            { text: 'Create', disabled: true },
+          ],
+          requiredPermission: 'initiatives.add_initiative',
+        },
+      },
+      {
+        path: 'initiatives/import',
+        name: 'initiatives-import',
+        component: () => import('@/modules/initiatives/views/InitiativeImportView.vue'),
+        meta: {
+          title: 'Import Initiatives',
+          breadcrumbs: [
+            { text: 'Dashboard', to: '/' },
+            { text: 'Initiatives', to: '/initiatives' },
+            { text: 'Import', disabled: true },
+          ],
+          requiredPermission: 'initiatives.add_initiative',
+        },
+      },
+      {
+        path: 'initiatives/failed-imports',
+        name: 'initiatives-failed-imports',
+        component: () => import('@/modules/initiatives/views/FailedImportsView.vue'),
+        meta: {
+          title: 'Failed Imports',
+          breadcrumbs: [
+            { text: 'Dashboard', to: '/' },
+            { text: 'Initiatives', to: '/initiatives' },
+            { text: 'Failed Imports', disabled: true },
+          ],
+          requiredPermission: 'initiatives.add_initiative',
+        },
+      },
+      {
+        path: 'initiatives/:id',
+        name: 'initiatives-detail',
+        component: () => import('@/modules/initiatives/views/InitiativeDetailView.vue'),
+        meta: {
+          title: 'Initiative Details',
+          breadcrumbs: [
+            { text: 'Dashboard', to: '/' },
+            { text: 'Initiatives', to: '/initiatives' },
+            { text: 'Details', disabled: true },
+          ],
+        },
+      },
+      {
+        path: 'initiatives/:id/edit',
+        name: 'initiatives-edit',
+        component: () => import('@/modules/initiatives/views/InitiativeEditView.vue'),
+        meta: {
+          title: 'Edit Initiative',
+          breadcrumbs: [
+            { text: 'Dashboard', to: '/' },
+            { text: 'Initiatives', to: '/initiatives' },
+            { text: 'Edit', disabled: true },
+          ],
+          requiredPermission: 'initiatives.change_initiative',
         },
       },
 

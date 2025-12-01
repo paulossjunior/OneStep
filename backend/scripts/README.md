@@ -1,146 +1,150 @@
-# Scripts Directory
+# Backend Scripts
 
-This directory contains utility scripts for managing the OneStep application and Superset.
+Esta pasta contém scripts utilitários para o backend do OneStep.
 
-## Available Scripts
+## 📁 Scripts Disponíveis
 
-### Superset Backup & Restore
+### 1. `create_oauth_app.py`
+Cria uma aplicação OAuth2 para autenticação do frontend.
 
-#### `backup_superset.sh`
-Creates a complete backup of your Superset instance.
-
-**Usage:**
+**Uso:**
 ```bash
-# Automatic timestamp backup
-./scripts/backup_superset.sh
-
-# Named backup
-./scripts/backup_superset.sh my_backup_name
+cd backend
+python scripts/create_oauth_app.py
 ```
 
-**What it backs up:**
-- Superset metadata database (dashboards, charts, datasets)
-- Superset home directory (uploads, thumbnails)
-- Configuration files
-- Exported assets (dashboards, datasources)
+**O que faz:**
+- Cria ou atualiza uma aplicação OAuth2 no Django
+- Configura como CLIENT_PUBLIC
+- Define grant type como PASSWORD
+- Gera Client ID e Client Secret
 
-**Output:** `backups/superset/<backup_name>.tar.gz`
+**Saída:**
+```
+OAuth2 Credentials:
+Client ID: <client-id>
+Client Secret: <client-secret>
+```
+
+### 2. `create_sample_initiatives.py`
+Cria dados de exemplo (iniciativas, pessoas, grupos) para desenvolvimento e testes.
+
+**Uso:**
+```bash
+cd backend
+python scripts/create_sample_initiatives.py
+```
+
+**O que faz:**
+- Cria pessoas de exemplo
+- Cria grupos organizacionais
+- Cria iniciativas (programas, projetos, eventos)
+- Estabelece relacionamentos entre entidades
+
+**Dados criados:**
+- ~10 pessoas
+- ~5 grupos organizacionais
+- ~15 iniciativas com hierarquia
+
+### 3. `backup_superset.sh`
+Script de backup para o Apache Superset (se estiver usando).
+
+**Uso:**
+```bash
+cd backend
+bash scripts/backup_superset.sh
+```
+
+**O que faz:**
+- Faz backup do banco de dados do Superset
+- Faz backup dos dashboards
+- Compacta em arquivo .tar.gz
+- Salva com timestamp
+
+## 🚀 Como Executar
+
+### Dentro do Docker
+
+```bash
+# OAuth App
+docker-compose -f docker-compose.dev.yml exec backend python scripts/create_oauth_app.py
+
+# Sample Data
+docker-compose -f docker-compose.dev.yml exec backend python scripts/create_sample_initiatives.py
+
+# Backup Superset
+docker-compose -f docker-compose.dev.yml exec backend bash scripts/backup_superset.sh
+```
+
+### Localmente
+
+```bash
+cd backend
+
+# Ativar ambiente virtual
+source venv/bin/activate  # Linux/Mac
+# ou
+venv\Scripts\activate  # Windows
+
+# Executar scripts
+python scripts/create_oauth_app.py
+python scripts/create_sample_initiatives.py
+bash scripts/backup_superset.sh
+```
+
+## 📝 Notas
+
+- Todos os scripts Python usam `django.setup()` para configurar o Django
+- Os scripts são idempotentes (podem ser executados múltiplas vezes)
+- Verifique os logs para confirmar a execução
+- Em produção, use variáveis de ambiente apropriadas
+
+## 🔧 Desenvolvimento
+
+Para criar novos scripts:
+
+1. Crie o arquivo na pasta `backend/scripts/`
+2. Adicione o shebang apropriado:
+   - Python: `#!/usr/bin/env python`
+   - Bash: `#!/bin/bash`
+3. Configure o Django (para scripts Python):
+   ```python
+   import os
+   import django
+   
+   os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'onestep.settings')
+   django.setup()
+   ```
+4. Torne executável (se necessário):
+   ```bash
+   chmod +x scripts/seu_script.sh
+   ```
+5. Documente neste README
+
+## 🆘 Troubleshooting
+
+### Erro: "No module named 'django'"
+```bash
+# Certifique-se de estar no ambiente virtual
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Erro: "DJANGO_SETTINGS_MODULE is not set"
+```bash
+# Defina a variável de ambiente
+export DJANGO_SETTINGS_MODULE=onestep.settings
+```
+
+### Erro: "Database connection failed"
+```bash
+# Verifique se o database está rodando
+docker-compose -f docker-compose.dev.yml ps db
+
+# Ou inicie o database
+docker-compose -f docker-compose.dev.yml up db
+```
 
 ---
 
-#### `restore_superset.sh`
-Restores Superset from a backup.
-
-**Usage:**
-```bash
-# List available backups
-./scripts/restore_superset.sh
-
-# Restore specific backup
-./scripts/restore_superset.sh backup_20241110_143022
-```
-
-**⚠️ WARNING:** This will replace all current Superset data!
-
----
-
-## Quick Commands
-
-### Backup Operations
-
-```bash
-# Create backup before making changes
-./scripts/backup_superset.sh before_changes
-
-# Create daily backup
-./scripts/backup_superset.sh daily_$(date +%Y%m%d)
-
-# Create backup before upgrade
-./scripts/backup_superset.sh pre_upgrade_v2.0
-```
-
-### Restore Operations
-
-```bash
-# See available backups
-./scripts/restore_superset.sh
-
-# Restore from specific backup
-./scripts/restore_superset.sh backup_20241110_143022
-
-# Restore from named backup
-./scripts/restore_superset.sh before_changes
-```
-
-### Backup Management
-
-```bash
-# List all backups with sizes
-ls -lh backups/superset/
-
-# Check total backup size
-du -sh backups/superset/
-
-# Remove old backups manually (keep last 5)
-cd backups/superset && ls -t *.tar.gz | tail -n +6 | xargs rm -f
-```
-
-## Scheduled Backups
-
-### Using Cron
-
-Add to crontab (`crontab -e`):
-
-```bash
-# Daily backup at 2 AM
-0 2 * * * cd /path/to/onestep && ./scripts/backup_superset.sh daily_backup
-
-# Weekly backup on Sundays at 3 AM
-0 3 * * 0 cd /path/to/onestep && ./scripts/backup_superset.sh weekly_backup
-
-# Monthly backup on 1st day at 4 AM
-0 4 1 * * cd /path/to/onestep && ./scripts/backup_superset.sh monthly_backup
-```
-
-## Prerequisites
-
-- Docker and Docker Compose installed
-- Containers running: `docker-compose -f docker-compose.superset.yml up -d`
-- Sufficient disk space for backups
-
-## Troubleshooting
-
-### Scripts not executable
-```bash
-chmod +x scripts/*.sh
-```
-
-### Containers not running
-```bash
-docker-compose -f docker-compose.superset.yml up -d
-```
-
-### Check backup integrity
-```bash
-tar tzf backups/superset/backup_name.tar.gz
-```
-
-### View backup contents
-```bash
-tar xzf backups/superset/backup_name.tar.gz -C /tmp/
-ls -la /tmp/backup_name/
-```
-
-## Documentation
-
-For detailed information, see:
-- [Superset Backup & Restore Guide](../docs/SUPERSET_BACKUP_RESTORE.md)
-- [Superset Setup Guide](../docs/SUPERSET_SETUP.md)
-
-## Support
-
-If you encounter issues:
-1. Check Docker logs: `docker logs superset` or `docker logs onestep_db`
-2. Verify environment variables in `.env.superset`
-3. Ensure sufficient disk space: `df -h`
-4. Review the detailed documentation in `docs/`
+**Última atualização**: 30 de Novembro de 2024

@@ -1,6 +1,7 @@
 # Django and core dependencies
 Django==4.2.7
 djangorestframework==3.14.0
+django-oauth-toolkit==2.3.0
 
 # Database and ORM
 psycopg2-binary==2.9.7  # PostgreSQL adapter (optional, for production)

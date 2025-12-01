@@ -6,7 +6,7 @@
     </v-card-title>
 
     <v-card-subtitle>
-      {{ $t(`initiatives.types.${initiative.type}`) }}
+      {{ typeof initiative.type === 'object' ? initiative.type.name : initiative.type }}
     </v-card-subtitle>
 
     <v-card-text>
@@ -59,7 +59,6 @@
 import { computed } from 'vue';
 import { format } from 'date-fns';
 import type { Initiative } from '../types/initiative.types';
-import { InitiativeType } from '../types/initiative.types';
 
 const props = withDefaults(
   defineProps<{
@@ -77,12 +76,13 @@ defineEmits<{
 }>();
 
 const typeIcon = computed(() => {
-  switch (props.initiative.type) {
-    case InitiativeType.PROGRAM:
+  const typeCode = typeof props.initiative.type === 'object' ? props.initiative.type.code : props.initiative.type;
+  switch (typeCode) {
+    case 'program':
       return 'mdi-folder-multiple';
-    case InitiativeType.PROJECT:
+    case 'project':
       return 'mdi-briefcase';
-    case InitiativeType.EVENT:
+    case 'event':
       return 'mdi-calendar-star';
     default:
       return 'mdi-file';
@@ -90,12 +90,13 @@ const typeIcon = computed(() => {
 });
 
 const typeColor = computed(() => {
-  switch (props.initiative.type) {
-    case InitiativeType.PROGRAM:
+  const typeCode = typeof props.initiative.type === 'object' ? props.initiative.type.code : props.initiative.type;
+  switch (typeCode) {
+    case 'program':
       return 'primary';
-    case InitiativeType.PROJECT:
+    case 'project':
       return 'success';
-    case InitiativeType.EVENT:
+    case 'event':
       return 'warning';
     default:
       return 'grey';
